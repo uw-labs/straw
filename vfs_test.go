@@ -11,19 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var tempdir string
-
-func TestMain(m *testing.M) {
-	var err error
-	tempdir, err = ioutil.TempDir("", "mgvfs_test_")
-	if err != nil {
-		panic(err)
-	}
-	m.Run()
-}
-
 type fsTester struct {
-	fs Filesystem
+	fs       Filesystem
+	testRoot string
 }
 
 func (fst *fsTester) TestOpenReadNotExisting(t *testing.T) {
@@ -37,7 +27,7 @@ func (fst *fsTester) TestOpenReadNotExisting(t *testing.T) {
 func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 	assert := assert.New(t)
 
-	name := filepath.Join(tempdir, "testCreateNewRW")
+	name := filepath.Join(fst.testRoot, "testCreateNewRW")
 
 	f, err := fst.fs.CreateWriteOnly(name)
 	assert.NoError(err)
@@ -53,7 +43,7 @@ func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 func (fst *fsTester) TestOverwrite(t *testing.T) {
 	assert := assert.New(t)
 
-	name := filepath.Join(tempdir, "testOverwrite")
+	name := filepath.Join(fst.testRoot, "testOverwrite")
 
 	w1, err := fst.fs.CreateWriteOnly(name)
 	assert.NoError(err)
@@ -141,8 +131,8 @@ func (fst *fsTester) TestWriteAtCreate(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}, all)
 }
-
 */
+
 func writeAll(w io.Writer, data []byte) error {
 	i, err := w.Write(data)
 	if err != nil {
@@ -154,18 +144,29 @@ func writeAll(w io.Writer, data []byte) error {
 	return nil
 }
 
+func tempDir() string {
+	tempdir, err := ioutil.TempDir("", "mgvfs_test_")
+	if err != nil {
+		panic(err)
+	}
+	return tempdir
+}
+
 func TestAll(t *testing.T) {
-	fs := &OsFilesystem{}
 
-	tester := &fsTester{fs}
+	all := []*fsTester{
+		&fsTester{&OsFilesystem{}, tempDir()},
+	}
 
-	typ := reflect.TypeOf(tester)
-	val := reflect.ValueOf(tester)
-	nm := typ.NumMethod()
-	for i := 0; i < nm; i++ {
-		mName := typ.Method(i).Name
-		if strings.HasPrefix(mName, "Test") {
-			t.Run(mName, val.Method(i).Interface().(func(*testing.T)))
+	for _, tester := range all {
+		typ := reflect.TypeOf(tester)
+		val := reflect.ValueOf(tester)
+		nm := typ.NumMethod()
+		for i := 0; i < nm; i++ {
+			mName := typ.Method(i).Name
+			if strings.HasPrefix(mName, "Test") {
+				t.Run(mName, val.Method(i).Interface().(func(*testing.T)))
+			}
 		}
 	}
 }
