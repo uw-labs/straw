@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fsTester struct {
@@ -26,14 +27,15 @@ func (fst *fsTester) TestOpenReadNotExisting(t *testing.T) {
 
 func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	name := filepath.Join(fst.testRoot, "testCreateNewRW")
 
 	f, err := fst.fs.CreateWriteOnly(name)
-	assert.NoError(err)
+	require.NoError(err)
 	assert.NotNil(f)
-	assert.NoError(writeAll(f, []byte{0, 1, 2, 3, 4}))
-	assert.NoError(f.Close())
+	require.NoError(writeAll(f, []byte{0, 1, 2, 3, 4}))
+	require.NoError(f.Close())
 
 	fi, err := fst.fs.Stat(name)
 	assert.NoError(err)
@@ -42,11 +44,12 @@ func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 
 func (fst *fsTester) TestOverwrite(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	name := filepath.Join(fst.testRoot, "testOverwrite")
 
 	w1, err := fst.fs.CreateWriteOnly(name)
-	assert.NoError(err)
+	require.NoError(err)
 	assert.NotNil(w1)
 	assert.NoError(writeAll(w1, []byte{0, 1, 2, 3, 4}))
 	assert.NoError(w1.Close())
