@@ -13,6 +13,7 @@ import (
 )
 
 type fsTester struct {
+	name     string
 	fs       Filesystem
 	testRoot string
 }
@@ -158,7 +159,7 @@ func tempDir() string {
 func TestAll(t *testing.T) {
 
 	all := []*fsTester{
-		&fsTester{&OsFilesystem{}, tempDir()},
+		&fsTester{"osfs", &OsFilesystem{}, tempDir()},
 	}
 
 	for _, tester := range all {
@@ -168,7 +169,7 @@ func TestAll(t *testing.T) {
 		for i := 0; i < nm; i++ {
 			mName := typ.Method(i).Name
 			if strings.HasPrefix(mName, "Test") {
-				t.Run(mName, val.Method(i).Interface().(func(*testing.T)))
+				t.Run(tester.name+"_"+mName, val.Method(i).Interface().(func(*testing.T)))
 			}
 		}
 	}
