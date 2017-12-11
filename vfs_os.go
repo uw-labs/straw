@@ -24,14 +24,16 @@ func (osfs *OsFilesystem) Stat(filename string) (os.FileInfo, error) {
 	return os.Stat(filename)
 }
 
-/*
 func (osfs *OsFilesystem) Mkdir(path string, mode os.FileMode) error {
 	return os.Mkdir(path, mode)
 }
-*/
 
 func (osfs *OsFilesystem) Open(name string) (io.ReadCloser, error) {
 	return os.Open(name)
+}
+
+func (osfs *OsFilesystem) Remove(name string) error {
+	return os.Remove(name)
 }
 
 func (osfs *OsFilesystem) CreateWriteOnly(name string) (io.WriteCloser, error) {

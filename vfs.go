@@ -11,7 +11,8 @@ type Filesystem interface {
 	Lstat(path string) (os.FileInfo, error)
 	Stat(path string) (os.FileInfo, error)
 	Readdir(path string) ([]os.FileInfo, error)
-	//Mkdir(path string, mode os.FileMode) error
+	Mkdir(path string, mode os.FileMode) error
+	Remove(path string) error
 }
 
 /*
