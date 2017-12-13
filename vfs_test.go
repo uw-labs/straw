@@ -59,6 +59,32 @@ func (fst *fsTester) TestMkdir(t *testing.T) {
 	assert.Equal(fi.IsDir(), true)
 }
 
+func (fst *fsTester) TestMkdirOnExistingDir(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	name := filepath.Join(fst.testRoot, "TestMkdirOnExistingDir")
+
+	require.NoError(fst.fs.Mkdir(name, 0755))
+	assert.Error(fst.fs.Mkdir(name, 0755), "file exists")
+}
+
+func (fst *fsTester) TestMkdirOnExistingFile(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	name := filepath.Join(fst.testRoot, "TestMkdirOnExistingFile")
+	require.NoError(fst.fs.Mkdir(name, 0755))
+
+	filename := filepath.Join(name, "testfile")
+	f, err := fst.fs.CreateWriteOnly(filename)
+	require.NoError(err)
+	require.NoError(writeAll(f, []byte{0, 1, 2, 3, 4}))
+	require.NoError(f.Close())
+
+	assert.Error(fst.fs.Mkdir(filename, 0755), "file exists")
+}
+
 func (fst *fsTester) TestRemoveDir(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
