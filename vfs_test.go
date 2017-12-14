@@ -39,7 +39,7 @@ func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 	require.NoError(f.Close())
 
 	fi, err := fst.fs.Stat(name)
-	assert.NoError(err)
+	require.NoError(err)
 	assert.Equal(fi.Size(), int64(5))
 	assert.Equal(fi.IsDir(), false)
 }
@@ -54,7 +54,7 @@ func (fst *fsTester) TestMkdir(t *testing.T) {
 	require.NoError(err)
 
 	fi, err := fst.fs.Stat(name)
-	assert.NoError(err)
+	require.NoError(err)
 	assert.Equal(fi.Size(), int64(4096))
 	assert.Equal(fi.IsDir(), true)
 }
@@ -118,7 +118,7 @@ func (fst *fsTester) TestOverwrite(t *testing.T) {
 	assert.NoError(w1.Close())
 
 	r1, err := fst.fs.Open(name)
-	assert.NoError(err)
+	require.NoError(err)
 	assert.NotNil(r1)
 	all, err := ioutil.ReadAll(r1)
 	assert.NoError(err)
