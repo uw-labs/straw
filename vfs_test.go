@@ -15,14 +15,15 @@ import (
 type fsTester struct {
 	name     string
 	fs       Filesystem
+	ff       func() Filesystem
 	testRoot string
 }
 
 func (fst *fsTester) TestOpenReadNotExisting(t *testing.T) {
 	assert := assert.New(t)
 
-	f, err := fst.fs.Open("/does/not/exist")
-	assert.Error(err)
+	f, err := fst.fs.OpenReadCloser("/does/not/exist")
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
 	assert.Nil(f)
 }
 
@@ -30,9 +31,9 @@ func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	name := filepath.Join(fst.testRoot, "testCreateNewRW")
+	name := filepath.Join(fst.testRoot, "TestCreateNewWriteOnly")
 
-	f, err := fst.fs.CreateWriteOnly(name)
+	f, err := fst.fs.CreateWriteCloser(name)
 	require.NoError(err)
 	assert.NotNil(f)
 	require.NoError(writeAll(f, []byte{0, 1, 2, 3, 4}))
@@ -44,11 +45,27 @@ func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 	assert.Equal(fi.IsDir(), false)
 }
 
-func (fst *fsTester) TestMkdir(t *testing.T) {
+func (fst *fsTester) TestMkdirAtRoot(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	name := filepath.Join(fst.testRoot, "TestMkdir")
+	name := filepath.Join(fst.testRoot, "TestMkdirAtRoot")
+
+	err := fst.fs.Mkdir(name, 0755)
+	require.NoError(err)
+
+	fi, err := fst.fs.Stat(name)
+	require.NoError(err)
+	assert.Equal(fi.Size(), int64(4096))
+	assert.Equal(fi.IsDir(), true)
+}
+
+func (fst *fsTester) TestMkdirTrailingSlash(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	name := filepath.Join(fst.testRoot, "TestMkdirTrailingSlash")
+	name = name + "/"
 
 	err := fst.fs.Mkdir(name, 0755)
 	require.NoError(err)
@@ -66,7 +83,9 @@ func (fst *fsTester) TestMkdirOnExistingDir(t *testing.T) {
 	name := filepath.Join(fst.testRoot, "TestMkdirOnExistingDir")
 
 	require.NoError(fst.fs.Mkdir(name, 0755))
-	assert.Error(fst.fs.Mkdir(name, 0755), "file exists")
+
+	err := fst.fs.Mkdir(name, 0755)
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "file exists") })
 }
 
 func (fst *fsTester) TestMkdirOnExistingFile(t *testing.T) {
@@ -77,19 +96,58 @@ func (fst *fsTester) TestMkdirOnExistingFile(t *testing.T) {
 	require.NoError(fst.fs.Mkdir(name, 0755))
 
 	filename := filepath.Join(name, "testfile")
-	f, err := fst.fs.CreateWriteOnly(filename)
+	f, err := fst.fs.CreateWriteCloser(filename)
 	require.NoError(err)
 	require.NoError(writeAll(f, []byte{0, 1, 2, 3, 4}))
 	require.NoError(f.Close())
 
-	assert.Error(fst.fs.Mkdir(filename, 0755), "file exists")
+	err = fst.fs.Mkdir(filename, 0755)
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "file exists") })
 }
 
-func (fst *fsTester) TestRemoveDir(t *testing.T) {
+func (fst *fsTester) TestMkdirInNonExistingDir(t *testing.T) {
+	assert := assert.New(t)
+
+	name := filepath.Join(fst.testRoot, "TestMkdirInNonExistingDir")
+	name = filepath.Join(name, "innerdir")
+	err := fst.fs.Mkdir(name, 0755)
+
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+}
+
+func (fst *fsTester) TestRemoveNonExistingAtRoot(t *testing.T) {
+	assert := assert.New(t)
+
+	err := fst.fs.Remove("not_existing_file")
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+}
+
+func (fst *fsTester) TestRemoveNonExistingInSubdir(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	name := filepath.Join(fst.testRoot, "TestRemoveDir")
+	top := filepath.Join(fst.testRoot, "TestRemoveNonExistingInSubdir")
+	require.NoError(fst.fs.Mkdir(top, 0755))
+
+	err := fst.fs.Remove(filepath.Join(top, "not_existing_file"))
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+}
+
+func (fst *fsTester) TestRemoveParentDirDoesNotExist(t *testing.T) {
+	assert := assert.New(t)
+
+	parent := filepath.Join(fst.testRoot, "TestRemoveParentDirDoesNotExist")
+	child := filepath.Join(parent, "some_filename")
+
+	err := fst.fs.Remove(child)
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+}
+
+func (fst *fsTester) TestRemoveEmptyDir(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	name := filepath.Join(fst.testRoot, "TestRemoveEmptyDir")
 
 	err := fst.fs.Mkdir(name, 0755)
 	require.NoError(err)
@@ -101,36 +159,59 @@ func (fst *fsTester) TestRemoveDir(t *testing.T) {
 	assert.NoError(fst.fs.Remove(name))
 
 	fi, err = fst.fs.Stat(name)
-	assert.Error(err, "no such file or directory")
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
 	assert.Nil(fi)
+}
+
+func (fst *fsTester) TestRemoveNonEmptyDir(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	name := filepath.Join(fst.testRoot, "TestRemoveNonEmptyDir")
+
+	err := fst.fs.Mkdir(name, 0755)
+	require.NoError(err)
+
+	w1, err := fst.fs.CreateWriteCloser(filepath.Join(name, "a_file"))
+	require.NoError(err)
+	assert.NoError(writeAll(w1, []byte{0, 1, 2, 3, 4}))
+	assert.NoError(w1.Close())
+
+	err = fst.fs.Remove(name)
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "directory not empty") })
+
+	fi, err := fst.fs.Stat(name)
+	require.NoError(err)
+	assert.Equal(fi.Name(), "TestRemoveNonEmptyDir")
 }
 
 func (fst *fsTester) TestOverwrite(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	name := filepath.Join(fst.testRoot, "testOverwrite")
+	name := filepath.Join(fst.testRoot, "TestOverwrite")
 
-	w1, err := fst.fs.CreateWriteOnly(name)
+	w1, err := fst.fs.CreateWriteCloser(name)
 	require.NoError(err)
 	assert.NotNil(w1)
 	assert.NoError(writeAll(w1, []byte{0, 1, 2, 3, 4}))
+
 	assert.NoError(w1.Close())
 
-	r1, err := fst.fs.Open(name)
+	r1, err := fst.fs.OpenReadCloser(name)
 	require.NoError(err)
 	assert.NotNil(r1)
 	all, err := ioutil.ReadAll(r1)
 	assert.NoError(err)
 	assert.Equal([]byte{0, 1, 2, 3, 4}, all)
 
-	w2, err := fst.fs.CreateWriteOnly(name)
+	w2, err := fst.fs.CreateWriteCloser(name)
 	assert.NoError(err)
 	assert.NotNil(w2)
 	assert.NoError(writeAll(w2, []byte{5, 6, 7}))
 	assert.NoError(w2.Close())
 
-	r2, err := fst.fs.Open(name)
+	r2, err := fst.fs.OpenReadCloser(name)
 	assert.NoError(err)
 	assert.NotNil(r2)
 	all, err = ioutil.ReadAll(r2)
@@ -221,7 +302,7 @@ func tempDir() string {
 func TestAll(t *testing.T) {
 
 	all := []*fsTester{
-		&fsTester{"osfs", &OsFilesystem{}, tempDir()},
+		&fsTester{"osfs", nil, func() Filesystem { return &TestLogFilesystem{t, &OsFilesystem{}} }, tempDir()},
 	}
 
 	for _, tester := range all {
@@ -231,6 +312,7 @@ func TestAll(t *testing.T) {
 		for i := 0; i < nm; i++ {
 			mName := typ.Method(i).Name
 			if strings.HasPrefix(mName, "Test") {
+				tester.fs = tester.ff()
 				t.Run(tester.name+"_"+mName, val.Method(i).Interface().(func(*testing.T)))
 			}
 		}

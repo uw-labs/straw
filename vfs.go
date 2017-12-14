@@ -6,8 +6,8 @@ import (
 )
 
 type Filesystem interface {
-	Open(name string) (io.ReadCloser, error)
-	CreateWriteOnly(name string) (io.WriteCloser, error)
+	OpenReadCloser(name string) (io.ReadCloser, error)
+	CreateWriteCloser(name string) (io.WriteCloser, error)
 	Lstat(path string) (os.FileInfo, error)
 	Stat(path string) (os.FileInfo, error)
 	Readdir(path string) ([]os.FileInfo, error)

@@ -28,7 +28,7 @@ func (osfs *OsFilesystem) Mkdir(path string, mode os.FileMode) error {
 	return os.Mkdir(path, mode)
 }
 
-func (osfs *OsFilesystem) Open(name string) (io.ReadCloser, error) {
+func (osfs *OsFilesystem) OpenReadCloser(name string) (io.ReadCloser, error) {
 	return os.Open(name)
 }
 
@@ -36,7 +36,7 @@ func (osfs *OsFilesystem) Remove(name string) error {
 	return os.Remove(name)
 }
 
-func (osfs *OsFilesystem) CreateWriteOnly(name string) (io.WriteCloser, error) {
+func (osfs *OsFilesystem) CreateWriteCloser(name string) (io.WriteCloser, error) {
 	return os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
