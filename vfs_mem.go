@@ -160,27 +160,6 @@ func (fs *MemFilesystem) getExisting(name string) (*memFile, error) {
 	return f, nil
 }
 
-func (fs *MemFilesystem) getExistingDir(name string) (*memFile, error) {
-	if name == "" {
-		return nil, errors.New("FIXME: proper error here")
-	}
-	if name == "/" {
-		return fs.Root, nil
-	}
-	dirs := fs.Split(name)
-	mf := fs.Root
-	for _, d := range dirs {
-		mf = mf.Entries[d]
-		if mf == nil {
-			return nil, fmt.Errorf("dir \"%s\" not found", d)
-		}
-		if !mf.IsDir_ {
-			return nil, fmt.Errorf("not a dir")
-		}
-	}
-	return mf, nil
-}
-
 func (fs *MemFilesystem) CreateWriteCloser(name string) (io.WriteCloser, error) {
 	fs.lk.Lock()
 	defer fs.lk.Unlock()
