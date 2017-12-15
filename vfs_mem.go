@@ -173,7 +173,7 @@ func (fs *MemFilesystem) CreateWriteCloser(name string) (io.WriteCloser, error) 
 		}
 	}
 	if !dir.IsDir() {
-		return nil, errors.New("not a dir")
+		return nil, errors.New("not a directory")
 	}
 
 	fileName := list[len(list)-1]
