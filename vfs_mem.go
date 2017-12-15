@@ -140,7 +140,7 @@ func (fs *MemFilesystem) getExistingFile(name string) (*memFile, error) {
 		return nil, err
 	}
 	if file.IsDir_ {
-		return nil, fmt.Errorf("%v is not a file", name)
+		return nil, fmt.Errorf("%s is a directory", name)
 	}
 	return file, nil
 }

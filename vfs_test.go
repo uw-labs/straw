@@ -1,6 +1,7 @@
 package mgvfs
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -20,11 +21,26 @@ type fsTester struct {
 	testRoot string
 }
 
-func (fst *fsTester) TestOpenReadNotExisting(t *testing.T) {
+func (fst *fsTester) TestOpenReadCloserNotExisting(t *testing.T) {
 	assert := assert.New(t)
 
 	f, err := fst.fs.OpenReadCloser("/does/not/exist")
 	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+	assert.Nil(f)
+}
+
+func (fst *fsTester) TestOpenReadCloserOnDirectory(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	name := filepath.Join(fst.testRoot, "TestOpenReadCloserOnDirectory")
+
+	err := fst.fs.Mkdir(name, 0755)
+	require.NoError(err)
+
+	f, err := fst.fs.OpenReadCloser(name)
+	assert.EqualError(err, fmt.Sprintf("%s is a directory", name))
+	//	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
 	assert.Nil(f)
 }
 

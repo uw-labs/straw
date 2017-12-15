@@ -1,6 +1,7 @@
 package mgvfs
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
@@ -29,7 +30,20 @@ func (osfs *OsFilesystem) Mkdir(path string, mode os.FileMode) error {
 }
 
 func (osfs *OsFilesystem) OpenReadCloser(name string) (io.ReadCloser, error) {
-	return os.Open(name)
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	if fi.IsDir() {
+		f.Close()
+		return nil, fmt.Errorf("%s is a directory", name)
+	}
+	return f, nil
 }
 
 func (osfs *OsFilesystem) Remove(name string) error {
