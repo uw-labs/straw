@@ -71,6 +71,26 @@ func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 	assert.Equal(os.FileMode(0644), files[0].Mode())
 }
 
+func (fst *fsTester) TestCreateWriteOnlyOnExistingDir(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	name := filepath.Join(fst.testRoot, "TestCreateWriteOnlyOnExistingDir")
+
+	err := fst.fs.Mkdir(name, 0755)
+	require.NoError(err)
+
+	f, err := fst.fs.CreateWriteCloser(name)
+	require.NotNil(err)
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "is a directory") })
+	assert.Nil(f)
+
+	fi, err := fst.fs.Stat(name)
+	require.NoError(err)
+	assert.Equal(fi.Size(), int64(4096))
+	assert.Equal(fi.IsDir(), true)
+}
+
 func (fst *fsTester) TestMkdirAtRoot(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)

@@ -186,6 +186,9 @@ func (fs *MemFilesystem) CreateWriteCloser(name string) (io.WriteCloser, error) 
 		}
 		dir.Entries[fileName] = f
 	}
+	if f.IsDir() {
+		return nil, fmt.Errorf("%s is a directory", name)
+	}
 	f.Content = f.Content[0:0]
 	return &memfileWriteCloser{f}, nil
 }
