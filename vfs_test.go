@@ -303,6 +303,7 @@ func TestAll(t *testing.T) {
 
 	all := []*fsTester{
 		&fsTester{"osfs", nil, func() Filesystem { return &TestLogFilesystem{t, &OsFilesystem{}} }, tempDir()},
+		&fsTester{"memfs", nil, func() Filesystem { return &TestLogFilesystem{t, NewMemFilesystem()} }, "/"},
 	}
 
 	for _, tester := range all {
