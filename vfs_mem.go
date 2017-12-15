@@ -203,8 +203,19 @@ func (mfwc *memfileWriteCloser) Close() error {
 	return nil
 }
 
-func (fs *MemFilesystem) Readdir(path string) ([]os.FileInfo, error) {
-	panic("write me : Readdir")
+func (fs *MemFilesystem) Readdir(name string) ([]os.FileInfo, error) {
+	file, err := fs.getExisting(name)
+	if err != nil {
+		return nil, err
+	}
+	if !file.IsDir() {
+		return nil, fmt.Errorf("%v is not a dir", name)
+	}
+	var res []os.FileInfo
+	for _, entry := range file.Entries {
+		res = append(res, entry)
+	}
+	return res, nil
 }
 
 func (fs MemFilesystem) Split(name string) []string {

@@ -3,6 +3,7 @@ package mgvfs
 import (
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -43,6 +44,15 @@ func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 	require.NoError(err)
 	assert.Equal(fi.Size(), int64(5))
 	assert.Equal(fi.IsDir(), false)
+
+	files, err := fst.fs.Readdir(fst.testRoot)
+	require.NoError(err)
+	assert.Equal(1, len(files))
+
+	assert.False(files[0].IsDir())
+	assert.Equal("TestCreateNewWriteOnly", files[0].Name())
+	assert.Equal(int64(5), files[0].Size())
+	assert.Equal(os.FileMode(0644), files[0].Mode())
 }
 
 func (fst *fsTester) TestMkdirAtRoot(t *testing.T) {

@@ -40,6 +40,19 @@ func (osfs *OsFilesystem) CreateWriteCloser(name string) (io.WriteCloser, error)
 	return os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
-func (osfs *OsFilesystem) Readdir(path string) ([]os.FileInfo, error) {
-	panic("write me")
+func (osfs *OsFilesystem) Readdir(name string) ([]os.FileInfo, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	fi, err := f.Readdir(-1)
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	err = f.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fi, nil
 }
