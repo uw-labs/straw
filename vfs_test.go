@@ -468,6 +468,19 @@ func TestMemFS(t *testing.T) {
 	testFS(t, "memfs", func() Filesystem { return &TestLogFilesystem{t, NewMemFilesystem()} }, "/")
 }
 
+func TestS3FS(t *testing.T) {
+	testBucket := os.Getenv("S3_TEST_BUCKET")
+	if testBucket == "" {
+		t.Skip("S3_TEST_BUCKET not set, skipping tests for s3 backend")
+	}
+
+	s3fs, err := NewS3Filesystem(testBucket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testFS(t, "s3fs", func() Filesystem { return &TestLogFilesystem{t, s3fs} }, "/")
+}
+
 func testFS(t *testing.T, name string, fsProvider func() Filesystem, rootDir string) {
 
 	tester := &fsTester{name, nil, fsProvider, rootDir}
