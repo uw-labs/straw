@@ -221,7 +221,7 @@ func (fs *MemFilesystem) Readdir(name string) ([]os.FileInfo, error) {
 	return res, nil
 }
 
-func (fs MemFilesystem) Split(name string) []string {
+func (fs *MemFilesystem) Split(name string) []string {
 	if name == "" {
 		return []string{}
 	}
