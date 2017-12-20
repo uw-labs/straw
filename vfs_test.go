@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -285,6 +286,48 @@ func (fst *fsTester) TestOverwrite(t *testing.T) {
 	all, err = ioutil.ReadAll(r2)
 	assert.NoError(err)
 	assert.Equal([]byte{5, 6, 7}, all)
+}
+
+func (fst *fsTester) TestReaddir(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	dir := filepath.Join(fst.testRoot, "TestReaddir")
+	dir1 := filepath.Join(dir, "dir1")
+	file1 := filepath.Join(dir, "file1")
+	file2 := filepath.Join(dir1, "file2")
+
+	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.fs.Mkdir(dir1, 0755))
+	require.NoError(fst.writeFile(fst.fs, file1, []byte{1}))
+	require.NoError(fst.writeFile(fst.fs, file2, []byte{2}))
+
+	rd1, err := fst.fs.Readdir(dir)
+	assert.NoError(err)
+	assert.Equal(2, len(rd1))
+
+	sort.Slice(rd1, func(i, j int) bool { return rd1[i].Name() < rd1[j].Name() })
+
+	assert.Equal("dir1", rd1[0].Name())
+	assert.Equal("file1", rd1[1].Name())
+
+	rd2, err := fst.fs.Readdir(dir1)
+	assert.NoError(err)
+	assert.Equal(1, len(rd2))
+
+	assert.Equal("file2", rd2[0].Name())
+}
+
+func (fst *fsTester) writeFile(fs Filesystem, name string, data []byte) error {
+	w, err := fs.CreateWriteCloser(name)
+	if err != nil {
+		return err
+	}
+	if err := writeAll(w, data); err != nil {
+		w.Close()
+		return err
+	}
+	return w.Close()
 }
 
 /*
