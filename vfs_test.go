@@ -254,6 +254,28 @@ func (fst *fsTester) TestRemoveNonEmptyDir(t *testing.T) {
 	assert.Equal(fi.Name(), "TestRemoveNonEmptyDir")
 }
 
+func (fst *fsTester) TestRemoveFileInDir(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	dirname := filepath.Join(fst.testRoot, "TestRemoveFileInDir")
+	filename := filepath.Join(dirname, "a_file")
+
+	require.NoError(fst.fs.Mkdir(dirname, 0755))
+	require.NoError(fst.writeFile(fst.fs, filename, []byte{1}))
+
+	fi, err := fst.fs.Stat(filename)
+	assert.NoError(err)
+	assert.NotNil(fi)
+
+	assert.NoError(fst.fs.Remove(filename))
+
+	fi, err = fst.fs.Stat(filename)
+	assert.Nil(fi)
+	require.NotNil(err)
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+}
+
 func (fst *fsTester) TestOverwrite(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
