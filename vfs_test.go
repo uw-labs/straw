@@ -318,6 +318,34 @@ func (fst *fsTester) TestReaddir(t *testing.T) {
 	assert.Equal("file2", rd2[0].Name())
 }
 
+func (fst *fsTester) TestStat(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	dir := filepath.Join(fst.testRoot, "TestStat")
+	dir1 := filepath.Join(dir, "dir")
+	file := filepath.Join(dir1, "file")
+
+	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.fs.Mkdir(dir1, 0755))
+	require.NoError(fst.writeFile(fst.fs, file, []byte{2}))
+
+	fi, err := fst.fs.Stat(dir1)
+	assert.NoError(err)
+	assert.Equal(true, fi.IsDir())
+	assert.Equal("dir", fi.Name())
+	assert.Equal(os.FileMode(0755)|os.ModeDir, fi.Mode())
+	assert.Equal(int64(4096), fi.Size())
+
+	fi, err = fst.fs.Stat(file)
+	assert.NoError(err)
+	assert.Equal(false, fi.IsDir())
+	assert.Equal("file", fi.Name())
+	assert.Equal(os.FileMode(0644), fi.Mode())
+	assert.Equal(int64(1), fi.Size())
+
+}
+
 func (fst *fsTester) writeFile(fs Filesystem, name string, data []byte) error {
 	w, err := fs.CreateWriteCloser(name)
 	if err != nil {
