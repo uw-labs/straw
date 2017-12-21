@@ -226,9 +226,9 @@ func (fst *fsTester) TestRemoveEmptyDir(t *testing.T) {
 	assert.NoError(fst.fs.Remove(name))
 
 	fi, err = fst.fs.Stat(name)
+	assert.Nil(fi)
 	require.NotNil(err)
 	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
-	assert.Nil(fi)
 }
 
 func (fst *fsTester) TestRemoveNonEmptyDir(t *testing.T) {
@@ -247,7 +247,7 @@ func (fst *fsTester) TestRemoveNonEmptyDir(t *testing.T) {
 
 	err = fst.fs.Remove(name)
 	require.NotNil(err)
-	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "directory not empty") })
+	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "directory not empty") }, "error does not match : %s", err.Error())
 
 	fi, err := fst.fs.Stat(name)
 	require.NoError(err)
