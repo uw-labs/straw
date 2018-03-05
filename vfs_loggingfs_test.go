@@ -1,4 +1,4 @@
-package mgvfs
+package govfs
 
 import (
 	"encoding/json"
