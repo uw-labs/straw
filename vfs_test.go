@@ -460,23 +460,26 @@ func tempDir() string {
 	return tempdir
 }
 
-func TestAll(t *testing.T) {
+func TestOSFS(t *testing.T) {
+	testFS(t, "osfs", func() Filesystem { return &TestLogFilesystem{t, &OsFilesystem{}} }, tempDir())
+}
 
-	all := []*fsTester{
-		&fsTester{"osfs", nil, func() Filesystem { return &TestLogFilesystem{t, &OsFilesystem{}} }, tempDir()},
-		&fsTester{"memfs", nil, func() Filesystem { return &TestLogFilesystem{t, NewMemFilesystem()} }, "/"},
-	}
+func TestMemFS(t *testing.T) {
+	testFS(t, "memfs", func() Filesystem { return &TestLogFilesystem{t, NewMemFilesystem()} }, "/")
+}
 
-	for _, tester := range all {
-		typ := reflect.TypeOf(tester)
-		val := reflect.ValueOf(tester)
-		nm := typ.NumMethod()
-		for i := 0; i < nm; i++ {
-			mName := typ.Method(i).Name
-			if strings.HasPrefix(mName, "Test") {
-				tester.fs = tester.ff()
-				t.Run(tester.name+"_"+mName, val.Method(i).Interface().(func(*testing.T)))
-			}
+func testFS(t *testing.T, name string, fsProvider func() Filesystem, rootDir string) {
+
+	tester := &fsTester{name, nil, fsProvider, rootDir}
+
+	typ := reflect.TypeOf(tester)
+	val := reflect.ValueOf(tester)
+	nm := typ.NumMethod()
+	for i := 0; i < nm; i++ {
+		mName := typ.Method(i).Name
+		if strings.HasPrefix(mName, "Test") {
+			tester.fs = tester.ff()
+			t.Run(tester.name+"_"+mName, val.Method(i).Interface().(func(*testing.T)))
 		}
 	}
 }
