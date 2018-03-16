@@ -51,8 +51,9 @@ func (fs *S3Filesystem) Stat(name string) (os.FileInfo, error) {
 
 	if name == "" {
 		return &s3StatResult{
-			name: "/",
-			size: 4096,
+			name:  "/",
+			isDir: true,
+			size:  4096,
 		}, nil
 	}
 
