@@ -366,6 +366,10 @@ func (fst *fsTester) TestStat(t *testing.T) {
 	assert.Equal(os.FileMode(0644), fi.Mode())
 	assert.Equal(int64(1), fi.Size())
 
+	root := "/"
+	fi, err = fst.fs.Stat(root)
+	assert.NoError(err)
+	assert.Equal(true, fi.IsDir())
 }
 
 func (fst *fsTester) writeFile(fs Filesystem, name string, data []byte) error {
