@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -335,6 +336,25 @@ func (fst *fsTester) TestReaddir(t *testing.T) {
 	assert.Equal(1, len(rd2))
 
 	assert.Equal("file2", rd2[0].Name())
+}
+
+func (fst *fsTester) TestReaddirMoreThanMaxKeysFiles(t *testing.T) {
+	// max keys defaults to 1000
+	assert := assert.New(t)
+	require := require.New(t)
+
+	dir := filepath.Join(fst.testRoot, "TestReaddirManyFiles")
+	require.NoError(fst.fs.Mkdir(dir, 0755))
+	for i := 0; i < 1010; i++ {
+		if i%100 == 0 {
+			log.Printf("created %d files", i)
+		}
+		file := filepath.Join(dir, fmt.Sprintf("file%d", i))
+		require.NoError(fst.writeFile(fst.fs, file, []byte{1}))
+	}
+	rd1, err := fst.fs.Readdir(dir)
+	assert.NoError(err)
+	require.Equal(1010, len(rd1))
 }
 
 func (fst *fsTester) TestStat(t *testing.T) {

@@ -366,7 +366,8 @@ func (fs *S3Filesystem) Readdir(name string) ([]os.FileInfo, error) {
 		if !*out.IsTruncated {
 			return results, nil
 		}
-		input.ContinuationToken = out.ContinuationToken
+
+		input.ContinuationToken = out.NextContinuationToken
 	}
 
 }
