@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 )
 
 var _ Filesystem = &OsFilesystem{}
@@ -68,5 +69,6 @@ func (osfs *OsFilesystem) Readdir(name string) ([]os.FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	sort.Slice(fi, func(i, j int) bool { return fi[i].Name() < fi[j].Name() })
 	return fi, nil
 }
