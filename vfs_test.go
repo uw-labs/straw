@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 
@@ -327,8 +326,6 @@ func (fst *fsTester) TestReaddir(t *testing.T) {
 	rd1, err := fst.fs.Readdir(dir)
 	assert.NoError(err)
 	assert.Equal(2, len(rd1))
-
-	sort.Slice(rd1, func(i, j int) bool { return rd1[i].Name() < rd1[j].Name() })
 
 	assert.Equal("dir1", rd1[0].Name())
 	assert.Equal("file1", rd1[1].Name())
