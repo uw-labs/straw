@@ -1,6 +1,9 @@
 Straw
 =====
 
+[![go-doc](https://godoc.org/github.com/uw-labs/straw?status.svg)](https://godoc.org/github.com/uw-labs/straw)
+
+
 Straw is a streaming I/O abstraction, intended to provide a nice way to interact with various stream (blob) storage backends.
 
 Currently it supports local filesystem and aws s3 as storage options.
