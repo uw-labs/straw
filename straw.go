@@ -1,11 +1,11 @@
-package govfs
+package straw
 
 import (
 	"io"
 	"os"
 )
 
-type Filesystem interface {
+type StreamStore interface {
 	OpenReadCloser(name string) (io.ReadCloser, error)
 	CreateWriteCloser(name string) (io.WriteCloser, error)
 	Lstat(path string) (os.FileInfo, error)
@@ -14,13 +14,3 @@ type Filesystem interface {
 	Mkdir(path string, mode os.FileMode) error
 	Remove(path string) error
 }
-
-/*
-type File interface {
-	io.Reader
-	io.Closer
-	io.ReaderAt
-	io.Writer
-	io.WriterAt
-}
-*/

@@ -1,4 +1,4 @@
-package govfs
+package straw
 
 import (
 	"fmt"
@@ -16,9 +16,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-var _ Filesystem = &S3Filesystem{}
+var _ StreamStore = &S3StreamStore{}
 
-func NewS3Filesystem(bucket string) (*S3Filesystem, error) {
+func NewS3StreamStore(bucket string) (*S3StreamStore, error) {
 
 	sess, err := session.NewSessionWithOptions(
 		session.Options{
@@ -32,20 +32,20 @@ func NewS3Filesystem(bucket string) (*S3Filesystem, error) {
 
 	svc := s3.New(sess)
 
-	return &S3Filesystem{sess, svc, bucket}, nil
+	return &S3StreamStore{sess, svc, bucket}, nil
 }
 
-type S3Filesystem struct {
+type S3StreamStore struct {
 	sess   *session.Session
 	s3     *s3.S3
 	bucket string
 }
 
-func (fs *S3Filesystem) Lstat(name string) (os.FileInfo, error) {
+func (fs *S3StreamStore) Lstat(name string) (os.FileInfo, error) {
 	panic("write me")
 }
 
-func (fs *S3Filesystem) Stat(name string) (os.FileInfo, error) {
+func (fs *S3StreamStore) Stat(name string) (os.FileInfo, error) {
 	name = fs.noSlashPrefix(name)
 	name = fs.noSlashSuffix(name)
 
@@ -137,7 +137,7 @@ func (sr *s3StatResult) Sys() interface{} {
 	return nil
 }
 
-func (fs *S3Filesystem) OpenReadCloser(name string) (io.ReadCloser, error) {
+func (fs *S3StreamStore) OpenReadCloser(name string) (io.ReadCloser, error) {
 
 	fi, err := fs.Stat(name)
 	if err != nil {
@@ -165,7 +165,7 @@ func (fs *S3Filesystem) OpenReadCloser(name string) (io.ReadCloser, error) {
 	return out.Body, nil
 }
 
-func (fs *S3Filesystem) Mkdir(name string, mode os.FileMode) error {
+func (fs *S3StreamStore) Mkdir(name string, mode os.FileMode) error {
 	if !strings.HasSuffix(name, "/") {
 		name = name + "/"
 	}
@@ -189,7 +189,7 @@ func (fs *S3Filesystem) Mkdir(name string, mode os.FileMode) error {
 	return err
 }
 
-func (fs *S3Filesystem) checkParentDir(child string) error {
+func (fs *S3StreamStore) checkParentDir(child string) error {
 	child = fs.noSlashPrefix(child)
 	child = fs.noSlashSuffix(child)
 
@@ -209,7 +209,7 @@ func (fs *S3Filesystem) checkParentDir(child string) error {
 	return nil
 }
 
-func (fs *S3Filesystem) Remove(name string) error {
+func (fs *S3StreamStore) Remove(name string) error {
 	fi, err := fs.Stat(name)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (fs *S3Filesystem) Remove(name string) error {
 	return err
 }
 
-func (fs *S3Filesystem) CreateWriteCloser(name string) (io.WriteCloser, error) {
+func (fs *S3StreamStore) CreateWriteCloser(name string) (io.WriteCloser, error) {
 	name = fs.noSlashPrefix(name)
 
 	if err := fs.checkParentDir(name); err != nil {
@@ -269,21 +269,21 @@ func (fs *S3Filesystem) CreateWriteCloser(name string) (io.WriteCloser, error) {
 	return ul, nil
 }
 
-func (fs *S3Filesystem) noSlashPrefix(s string) string {
+func (fs *S3StreamStore) noSlashPrefix(s string) string {
 	if strings.HasPrefix(s, "/") {
 		return s[1:]
 	}
 	return s
 }
 
-func (fs *S3Filesystem) noSlashSuffix(s string) string {
+func (fs *S3StreamStore) noSlashSuffix(s string) string {
 	if strings.HasSuffix(s, "/") {
 		return s[:len(s)-1]
 	}
 	return s
 }
 
-func (fs *S3Filesystem) fixTrailingSlash(s string, wantSlash bool) string {
+func (fs *S3StreamStore) fixTrailingSlash(s string, wantSlash bool) string {
 	if wantSlash {
 		if !strings.HasSuffix(s, "/") {
 			return s + "/"
@@ -296,7 +296,7 @@ func (fs *S3Filesystem) fixTrailingSlash(s string, wantSlash bool) string {
 	return s
 }
 
-func (fs *S3Filesystem) lastElem(s string) string {
+func (fs *S3StreamStore) lastElem(s string) string {
 	_, f := filepath.Split(fs.noSlashSuffix(s))
 	return f
 }
@@ -318,7 +318,7 @@ func (wc *s3uploader) Close() error {
 	return <-wc.errCh
 }
 
-func (fs *S3Filesystem) Readdir(name string) ([]os.FileInfo, error) {
+func (fs *S3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	if !strings.HasSuffix(name, "/") {
 		name = name + "/"
 	}

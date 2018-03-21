@@ -1,4 +1,4 @@
-package govfs
+package straw
 
 import (
 	"fmt"
@@ -7,30 +7,24 @@ import (
 	"sort"
 )
 
-var _ Filesystem = &OsFilesystem{}
+var _ StreamStore = &OsStreamStore{}
 
-type OsFilesystem struct {
+type OsStreamStore struct {
 }
 
-/*
-func (osfs *OsFilesystem) OpenFile(filename string, flag int, perm os.FileMode) (File, error) {
-	return os.OpenFile(filename, flag, perm)
-}
-*/
-
-func (osfs *OsFilesystem) Lstat(filename string) (os.FileInfo, error) {
+func (_ *OsStreamStore) Lstat(filename string) (os.FileInfo, error) {
 	return os.Lstat(filename)
 }
 
-func (osfs *OsFilesystem) Stat(filename string) (os.FileInfo, error) {
+func (_ *OsStreamStore) Stat(filename string) (os.FileInfo, error) {
 	return os.Stat(filename)
 }
 
-func (osfs *OsFilesystem) Mkdir(path string, mode os.FileMode) error {
+func (_ *OsStreamStore) Mkdir(path string, mode os.FileMode) error {
 	return os.Mkdir(path, mode)
 }
 
-func (osfs *OsFilesystem) OpenReadCloser(name string) (io.ReadCloser, error) {
+func (_ *OsStreamStore) OpenReadCloser(name string) (io.ReadCloser, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
@@ -47,15 +41,15 @@ func (osfs *OsFilesystem) OpenReadCloser(name string) (io.ReadCloser, error) {
 	return f, nil
 }
 
-func (osfs *OsFilesystem) Remove(name string) error {
+func (_ *OsStreamStore) Remove(name string) error {
 	return os.Remove(name)
 }
 
-func (osfs *OsFilesystem) CreateWriteCloser(name string) (io.WriteCloser, error) {
+func (_ *OsStreamStore) CreateWriteCloser(name string) (io.WriteCloser, error) {
 	return os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
-func (osfs *OsFilesystem) Readdir(name string) ([]os.FileInfo, error) {
+func (_ *OsStreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, err

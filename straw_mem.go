@@ -1,4 +1,4 @@
-package govfs
+package straw
 
 import (
 	"bytes"
@@ -12,15 +12,15 @@ import (
 	"time"
 )
 
-var _ Filesystem = &MemFilesystem{}
+var _ StreamStore = &MemStreamStore{}
 
-func NewMemFilesystem() *MemFilesystem {
-	return &MemFilesystem{Root: &memFile{
+func NewMemStreamStore() *MemStreamStore {
+	return &MemStreamStore{Root: &memFile{
 		IsDir_: true,
 	}}
 }
 
-type MemFilesystem struct {
+type MemStreamStore struct {
 	lk   sync.Mutex
 	Root *memFile
 }
@@ -63,15 +63,15 @@ func (mf *memFile) Sys() interface{} {
 	return nil
 }
 
-func (fs *MemFilesystem) Lstat(name string) (os.FileInfo, error) {
+func (fs *MemStreamStore) Lstat(name string) (os.FileInfo, error) {
 	panic("write me: Lstat")
 }
 
-func (fs *MemFilesystem) Stat(name string) (os.FileInfo, error) {
+func (fs *MemStreamStore) Stat(name string) (os.FileInfo, error) {
 	return fs.getExisting(name)
 }
 
-func (fs *MemFilesystem) OpenReadCloser(name string) (io.ReadCloser, error) {
+func (fs *MemStreamStore) OpenReadCloser(name string) (io.ReadCloser, error) {
 	fs.lk.Lock()
 	defer fs.lk.Unlock()
 
@@ -82,7 +82,7 @@ func (fs *MemFilesystem) OpenReadCloser(name string) (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewReader(file.Content)), err
 }
 
-func (fs *MemFilesystem) Mkdir(name string, mode os.FileMode) error {
+func (fs *MemStreamStore) Mkdir(name string, mode os.FileMode) error {
 	fs.lk.Lock()
 	defer fs.lk.Unlock()
 
@@ -104,7 +104,7 @@ func (fs *MemFilesystem) Mkdir(name string, mode os.FileMode) error {
 	return nil
 }
 
-func (fs *MemFilesystem) Remove(name string) error {
+func (fs *MemStreamStore) Remove(name string) error {
 	fs.lk.Lock()
 	defer fs.lk.Unlock()
 
@@ -134,7 +134,7 @@ func (fs *MemFilesystem) Remove(name string) error {
 	return nil
 }
 
-func (fs *MemFilesystem) getExistingFile(name string) (*memFile, error) {
+func (fs *MemStreamStore) getExistingFile(name string) (*memFile, error) {
 	file, err := fs.getExisting(name)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (fs *MemFilesystem) getExistingFile(name string) (*memFile, error) {
 	return file, nil
 }
 
-func (fs *MemFilesystem) getExisting(name string) (*memFile, error) {
+func (fs *MemStreamStore) getExisting(name string) (*memFile, error) {
 	list := fs.Split(name)
 	f := fs.Root
 	for _, elem := range list {
@@ -160,7 +160,7 @@ func (fs *MemFilesystem) getExisting(name string) (*memFile, error) {
 	return f, nil
 }
 
-func (fs *MemFilesystem) CreateWriteCloser(name string) (io.WriteCloser, error) {
+func (fs *MemStreamStore) CreateWriteCloser(name string) (io.WriteCloser, error) {
 	fs.lk.Lock()
 	defer fs.lk.Unlock()
 
@@ -206,7 +206,7 @@ func (mfwc *memfileWriteCloser) Close() error {
 	return nil
 }
 
-func (fs *MemFilesystem) Readdir(name string) ([]os.FileInfo, error) {
+func (fs *MemStreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	file, err := fs.getExisting(name)
 	if err != nil {
 		return nil, err
@@ -221,7 +221,7 @@ func (fs *MemFilesystem) Readdir(name string) ([]os.FileInfo, error) {
 	return res, nil
 }
 
-func (fs *MemFilesystem) Split(name string) []string {
+func (fs *MemStreamStore) Split(name string) []string {
 	if name == "" {
 		return []string{}
 	}

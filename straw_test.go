@@ -1,4 +1,4 @@
-package govfs
+package straw
 
 import (
 	"fmt"
@@ -17,8 +17,8 @@ import (
 
 type fsTester struct {
 	name     string
-	fs       Filesystem
-	ff       func() Filesystem
+	fs       StreamStore
+	ff       func() StreamStore
 	testRoot string
 }
 
@@ -389,7 +389,7 @@ func (fst *fsTester) TestStat(t *testing.T) {
 	assert.Equal(true, fi.IsDir())
 }
 
-func (fst *fsTester) writeFile(fs Filesystem, name string, data []byte) error {
+func (fst *fsTester) writeFile(fs StreamStore, name string, data []byte) error {
 	w, err := fs.CreateWriteCloser(name)
 	if err != nil {
 		return err
@@ -474,7 +474,7 @@ func writeAll(w io.Writer, data []byte) error {
 }
 
 func tempDir() string {
-	tempdir, err := ioutil.TempDir("", "mgvfs_test_")
+	tempdir, err := ioutil.TempDir("", "straw_test_")
 	if err != nil {
 		panic(err)
 	}
@@ -482,11 +482,11 @@ func tempDir() string {
 }
 
 func TestOSFS(t *testing.T) {
-	testFS(t, "osfs", func() Filesystem { return &TestLogFilesystem{t, &OsFilesystem{}} }, tempDir())
+	testFS(t, "osfs", func() StreamStore { return &TestLogStreamStore{t, &OsStreamStore{}} }, tempDir())
 }
 
 func TestMemFS(t *testing.T) {
-	testFS(t, "memfs", func() Filesystem { return &TestLogFilesystem{t, NewMemFilesystem()} }, "/")
+	testFS(t, "memfs", func() StreamStore { return &TestLogStreamStore{t, NewMemStreamStore()} }, "/")
 }
 
 func TestS3FS(t *testing.T) {
@@ -495,14 +495,14 @@ func TestS3FS(t *testing.T) {
 		t.Skip("S3_TEST_BUCKET not set, skipping tests for s3 backend")
 	}
 
-	s3fs, err := NewS3Filesystem(testBucket)
+	s3fs, err := NewS3StreamStore(testBucket)
 	if err != nil {
 		t.Fatal(err)
 	}
-	testFS(t, "s3fs", func() Filesystem { return &TestLogFilesystem{t, s3fs} }, "/")
+	testFS(t, "s3fs", func() StreamStore { return &TestLogStreamStore{t, s3fs} }, "/")
 }
 
-func testFS(t *testing.T, name string, fsProvider func() Filesystem, rootDir string) {
+func testFS(t *testing.T, name string, fsProvider func() StreamStore, rootDir string) {
 
 	tester := &fsTester{name, nil, fsProvider, rootDir}
 
