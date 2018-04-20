@@ -64,7 +64,7 @@ func (mf *memFile) Sys() interface{} {
 }
 
 func (fs *MemStreamStore) Lstat(name string) (os.FileInfo, error) {
-	panic("write me: Lstat")
+	return fs.Stat(name)
 }
 
 func (fs *MemStreamStore) Stat(name string) (os.FileInfo, error) {
