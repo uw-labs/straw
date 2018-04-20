@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -71,7 +70,7 @@ func (fs *MemStreamStore) Stat(name string) (os.FileInfo, error) {
 	return fs.getExisting(name)
 }
 
-func (fs *MemStreamStore) OpenReadCloser(name string) (io.ReadCloser, error) {
+func (fs *MemStreamStore) OpenReadCloser(name string) (StrawReader, error) {
 	fs.lk.Lock()
 	defer fs.lk.Unlock()
 
@@ -160,7 +159,7 @@ func (fs *MemStreamStore) getExisting(name string) (*memFile, error) {
 	return f, nil
 }
 
-func (fs *MemStreamStore) CreateWriteCloser(name string) (io.WriteCloser, error) {
+func (fs *MemStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 	fs.lk.Lock()
 	defer fs.lk.Unlock()
 
