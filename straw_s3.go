@@ -96,7 +96,7 @@ func (fs *S3StreamStore) Stat(name string) (os.FileInfo, error) {
 
 	switch len(matching) {
 	case 0:
-		return nil, fmt.Errorf("\"%s\" : no such file or directory", name)
+		return nil, os.ErrNotExist
 	case 2:
 		panic("bug?")
 	default:
@@ -157,7 +157,7 @@ func (fs *S3StreamStore) OpenReadCloser(name string) (io.ReadCloser, error) {
 	if err != nil {
 		if e, ok := err.(awserr.Error); ok {
 			if e.Code() == s3.ErrCodeNoSuchKey {
-				return nil, fmt.Errorf("%s : no such file or directory", name)
+				return nil, os.ErrNotExist
 			}
 		}
 		log.Printf("WARN: unhandled error type :  %T\n", err)
