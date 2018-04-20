@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -364,6 +365,7 @@ func (fs *S3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 		}
 
 		if !*out.IsTruncated {
+			sort.Slice(results, func(i, j int) bool { return results[i].Name() < results[j].Name() })
 			return results, nil
 		}
 
