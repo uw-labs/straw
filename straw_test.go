@@ -517,3 +517,27 @@ func testFS(t *testing.T, name string, fsProvider func() StreamStore, rootDir st
 		}
 	}
 }
+
+func TestMkdirAll(t *testing.T) {
+	assert := assert.New(t)
+
+	ss := NewMemStreamStore()
+
+	assert.NoError(MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
+
+	fis, err := ss.Readdir("/foo/bar/baz/qux/")
+	assert.NoError(err)
+
+	assert.Equal(1, len(fis))
+	assert.Equal("quux", fis[0].Name())
+}
+
+func TestMkdirAllExistingNoError(t *testing.T) {
+	assert := assert.New(t)
+
+	ss := NewMemStreamStore()
+
+	assert.NoError(MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
+	assert.NoError(MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
+
+}
