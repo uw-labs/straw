@@ -91,7 +91,7 @@ func (fs *MemStreamStore) Mkdir(name string, mode os.FileMode) error {
 	for _, elem := range list[0 : len(list)-1] {
 		dir = dir.Entries[elem]
 		if dir == nil {
-			return errors.New("no such file or directory")
+			return os.ErrNotExist
 		}
 	}
 	newdir := list[len(list)-1]
@@ -113,19 +113,19 @@ func (fs *MemStreamStore) Remove(name string) error {
 	for _, elem := range list[0 : len(list)-1] {
 		parent = parent.Entries[elem]
 		if parent == nil {
-			return errors.New("no such file or directory")
+			return os.ErrNotExist
 		}
 	}
 	filename := list[len(list)-1]
 	if parent.Entries == nil {
-		return errors.New("no such file or directory")
+		return os.ErrNotExist
 	}
 	if parent.Entries[filename] == nil {
-		return errors.New("no such file or directory")
+		return os.ErrNotExist
 	}
 	file := parent.Entries[filename]
 	if file == nil {
-		return errors.New("no such file or directory")
+		return os.ErrNotExist
 	}
 	if file.IsDir_ && file.Entries != nil && len(file.Entries) != 0 {
 		return errors.New("directory not empty")
@@ -155,7 +155,7 @@ func (fs *MemStreamStore) getExisting(name string) (*memFile, error) {
 		}
 	}
 	if f == nil {
-		return nil, errors.New("no such file or directory")
+		return nil, os.ErrNotExist
 	}
 	return f, nil
 }

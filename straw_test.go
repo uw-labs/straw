@@ -26,7 +26,7 @@ func (fst *fsTester) TestOpenReadCloserNotExisting(t *testing.T) {
 	assert := assert.New(t)
 
 	f, err := fst.fs.OpenReadCloser("/does/not/exist")
-	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") }, "error does not match: %s", err.Error())
+	assert.True(os.IsNotExist(err))
 	assert.Nil(f)
 }
 
@@ -179,14 +179,14 @@ func (fst *fsTester) TestMkdirInNonExistingDir(t *testing.T) {
 	name = filepath.Join(name, "innerdir")
 	err := fst.fs.Mkdir(name, 0755)
 
-	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") }, "error does not match: %s", err.Error())
+	assert.True(os.IsNotExist(err))
 }
 
 func (fst *fsTester) TestRemoveNonExistingAtRoot(t *testing.T) {
 	assert := assert.New(t)
 
 	err := fst.fs.Remove("not_existing_file")
-	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+	assert.True(os.IsNotExist(err))
 }
 
 func (fst *fsTester) TestRemoveNonExistingInSubdir(t *testing.T) {
@@ -197,7 +197,7 @@ func (fst *fsTester) TestRemoveNonExistingInSubdir(t *testing.T) {
 	require.NoError(fst.fs.Mkdir(top, 0755))
 
 	err := fst.fs.Remove(filepath.Join(top, "not_existing_file"))
-	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+	assert.True(os.IsNotExist(err))
 }
 
 func (fst *fsTester) TestRemoveParentDirDoesNotExist(t *testing.T) {
@@ -207,7 +207,7 @@ func (fst *fsTester) TestRemoveParentDirDoesNotExist(t *testing.T) {
 	child := filepath.Join(parent, "some_filename")
 
 	err := fst.fs.Remove(child)
-	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+	assert.True(os.IsNotExist(err))
 }
 
 func (fst *fsTester) TestRemoveEmptyDir(t *testing.T) {
@@ -228,7 +228,7 @@ func (fst *fsTester) TestRemoveEmptyDir(t *testing.T) {
 	fi, err = fst.fs.Stat(name)
 	assert.Nil(fi)
 	require.NotNil(err)
-	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+	assert.True(os.IsNotExist(err))
 }
 
 func (fst *fsTester) TestRemoveNonEmptyDir(t *testing.T) {
@@ -273,7 +273,7 @@ func (fst *fsTester) TestRemoveFileInDir(t *testing.T) {
 	fi, err = fst.fs.Stat(filename)
 	assert.Nil(fi)
 	require.NotNil(err)
-	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "no such file or directory") })
+	assert.True(os.IsNotExist(err))
 }
 
 func (fst *fsTester) TestOverwrite(t *testing.T) {
