@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -217,6 +218,7 @@ func (fs *MemStreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	for _, entry := range file.Entries {
 		res = append(res, entry)
 	}
+	sort.Slice(res, func(i, j int) bool { return res[i].Name() < res[j].Name() })
 	return res, nil
 }
 
