@@ -138,7 +138,7 @@ func (sr *s3StatResult) Sys() interface{} {
 	return nil
 }
 
-func (fs *S3StreamStore) OpenReadCloser(name string) (io.ReadCloser, error) {
+func (fs *S3StreamStore) OpenReadCloser(name string) (StrawReader, error) {
 
 	fi, err := fs.Stat(name)
 	if err != nil {
@@ -235,7 +235,7 @@ func (fs *S3StreamStore) Remove(name string) error {
 	return err
 }
 
-func (fs *S3StreamStore) CreateWriteCloser(name string) (io.WriteCloser, error) {
+func (fs *S3StreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 	name = fs.noSlashPrefix(name)
 
 	if err := fs.checkParentDir(name); err != nil {

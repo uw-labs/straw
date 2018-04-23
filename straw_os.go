@@ -2,7 +2,6 @@ package straw
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"sort"
 )
@@ -24,7 +23,7 @@ func (_ *OsStreamStore) Mkdir(path string, mode os.FileMode) error {
 	return os.Mkdir(path, mode)
 }
 
-func (_ *OsStreamStore) OpenReadCloser(name string) (io.ReadCloser, error) {
+func (_ *OsStreamStore) OpenReadCloser(name string) (StrawReader, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
@@ -45,7 +44,7 @@ func (_ *OsStreamStore) Remove(name string) error {
 	return os.Remove(name)
 }
 
-func (_ *OsStreamStore) CreateWriteCloser(name string) (io.WriteCloser, error) {
+func (_ *OsStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 	return os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
