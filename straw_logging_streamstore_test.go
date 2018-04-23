@@ -3,7 +3,6 @@ package straw
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"testing"
 )
@@ -27,7 +26,7 @@ func (fs *TestLogStreamStore) Stat(name string) (os.FileInfo, error) {
 	return fs.wrapped.Stat(name)
 }
 
-func (fs *TestLogStreamStore) OpenReadCloser(name string) (io.ReadCloser, error) {
+func (fs *TestLogStreamStore) OpenReadCloser(name string) (StrawReader, error) {
 	fs.before("Open", name)
 	defer fs.after("Open", name)
 	return fs.wrapped.OpenReadCloser(name)
@@ -45,7 +44,7 @@ func (fs *TestLogStreamStore) Remove(name string) error {
 	return fs.wrapped.Remove(name)
 }
 
-func (fs *TestLogStreamStore) CreateWriteCloser(name string) (io.WriteCloser, error) {
+func (fs *TestLogStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 	fs.before("CreateWriteOnly", name)
 	defer fs.after("CreateWriteOnly", name)
 	return fs.wrapped.CreateWriteCloser(name)
