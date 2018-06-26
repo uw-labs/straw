@@ -17,6 +17,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
+const (
+	serverSideEncryptionAlgo = "AES256"
+)
+
 var _ StreamStore = &S3StreamStore{}
 
 func NewS3StreamStore(bucket string) (*S3StreamStore, error) {
@@ -33,13 +37,18 @@ func NewS3StreamStore(bucket string) (*S3StreamStore, error) {
 
 	svc := s3.New(sess)
 
-	return &S3StreamStore{sess, svc, bucket}, nil
+	return &S3StreamStore{sess, svc, bucket, false}, nil
 }
 
 type S3StreamStore struct {
-	sess   *session.Session
-	s3     *s3.S3
-	bucket string
+	sess       *session.Session
+	s3         *s3.S3
+	bucket     string
+	sseApplied bool
+}
+
+func (fs *S3StreamStore) EnableSSE() {
+	fs.sseApplied = true
 }
 
 func (fs *S3StreamStore) Lstat(name string) (os.FileInfo, error) {
@@ -180,12 +189,15 @@ func (fs *S3StreamStore) Mkdir(name string, mode os.FileMode) error {
 	}
 
 	input := &s3.PutObjectInput{
-		//Body:                 aws.ReadSeekCloser(strings.NewReader("")),
-		Bucket:               aws.String(fs.bucket),
-		Key:                  aws.String(name),
-		ServerSideEncryption: aws.String("AES256"),
-		ContentType:          aws.String("application/x-directory"),
+		Bucket:      aws.String(fs.bucket),
+		Key:         aws.String(name),
+		ContentType: aws.String("application/x-directory"),
 	}
+
+	if fs.sseApplied {
+		input.ServerSideEncryption = aws.String(serverSideEncryptionAlgo)
+	}
+
 	_, err := fs.s3.PutObject(input)
 	return err
 }
@@ -251,10 +263,13 @@ func (fs *S3StreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 	pr, pw := io.Pipe()
 
 	input := &s3manager.UploadInput{
-		Body:                 pr,
-		Key:                  aws.String(name),
-		Bucket:               aws.String(fs.bucket),
-		ServerSideEncryption: aws.String("AES256"),
+		Body:   pr,
+		Key:    aws.String(name),
+		Bucket: aws.String(fs.bucket),
+	}
+
+	if fs.sseApplied {
+		input.ServerSideEncryption = aws.String(serverSideEncryptionAlgo)
 	}
 
 	errCh := make(chan error, 1)
