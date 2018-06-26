@@ -17,9 +17,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
+type ServerSideEncryptionType string
+
+const (
+	ServerSideEncryptionTypeNone   ServerSideEncryptionType = ""
+	ServerSideEncryptionTypeAES256 ServerSideEncryptionType = "AES256"
+)
+
 var _ StreamStore = &S3StreamStore{}
 
-func NewS3StreamStore(bucket string) (*S3StreamStore, error) {
+func NewS3StreamStore(bucket string, options ...S3Option) (*S3StreamStore, error) {
 
 	sess, err := session.NewSessionWithOptions(
 		session.Options{
@@ -33,13 +40,29 @@ func NewS3StreamStore(bucket string) (*S3StreamStore, error) {
 
 	svc := s3.New(sess)
 
-	return &S3StreamStore{sess, svc, bucket}, nil
+	ss := &S3StreamStore{
+		sess:   sess,
+		s3:     svc,
+		bucket: bucket,
+	}
+
+	for _, option := range options {
+		switch opt := option.(type) {
+		case serverSideEncryptionOpt:
+			ss.sseType = ServerSideEncryptionType(opt)
+		default:
+			log.Fatalf("unhandled option type %T. This is a bug.", opt)
+		}
+	}
+
+	return ss, nil
 }
 
 type S3StreamStore struct {
-	sess   *session.Session
-	s3     *s3.S3
-	bucket string
+	sess    *session.Session
+	s3      *s3.S3
+	bucket  string
+	sseType ServerSideEncryptionType
 }
 
 func (fs *S3StreamStore) Lstat(name string) (os.FileInfo, error) {
@@ -180,12 +203,15 @@ func (fs *S3StreamStore) Mkdir(name string, mode os.FileMode) error {
 	}
 
 	input := &s3.PutObjectInput{
-		//Body:                 aws.ReadSeekCloser(strings.NewReader("")),
-		Bucket:               aws.String(fs.bucket),
-		Key:                  aws.String(name),
-		ServerSideEncryption: aws.String("AES256"),
-		ContentType:          aws.String("application/x-directory"),
+		Bucket:      aws.String(fs.bucket),
+		Key:         aws.String(name),
+		ContentType: aws.String("application/x-directory"),
 	}
+
+	if fs.sseType != ServerSideEncryptionTypeNone {
+		input.ServerSideEncryption = aws.String(string(fs.sseType))
+	}
+
 	_, err := fs.s3.PutObject(input)
 	return err
 }
@@ -254,6 +280,10 @@ func (fs *S3StreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 		Body:   pr,
 		Key:    aws.String(name),
 		Bucket: aws.String(fs.bucket),
+	}
+
+	if fs.sseType != ServerSideEncryptionTypeNone {
+		input.ServerSideEncryption = aws.String(string(fs.sseType))
 	}
 
 	errCh := make(chan error, 1)
