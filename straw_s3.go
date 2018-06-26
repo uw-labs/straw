@@ -251,9 +251,10 @@ func (fs *S3StreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 	pr, pw := io.Pipe()
 
 	input := &s3manager.UploadInput{
-		Body:   pr,
-		Key:    aws.String(name),
-		Bucket: aws.String(fs.bucket),
+		Body:                 pr,
+		Key:                  aws.String(name),
+		Bucket:               aws.String(fs.bucket),
+		ServerSideEncryption: aws.String("AES256"),
 	}
 
 	errCh := make(chan error, 1)
