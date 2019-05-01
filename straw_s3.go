@@ -28,7 +28,11 @@ var _ StreamStore = &S3StreamStore{}
 
 func NewS3StreamStore(bucket string, options ...S3Option) (*S3StreamStore, error) {
 
-	sess, err := session.NewSession()
+	sess, err := session.NewSessionWithOptions(
+		session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
