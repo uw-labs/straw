@@ -65,7 +65,8 @@ type S3StreamStore struct {
 }
 
 func (fs *S3StreamStore) Lstat(name string) (os.FileInfo, error) {
-	panic("write me")
+	// S3 does not support symlinks
+	return fs.Stat(name)
 }
 
 func (fs *S3StreamStore) Stat(name string) (os.FileInfo, error) {
