@@ -92,8 +92,6 @@ func (fs *S3StreamStore) Stat(name string) (os.FileInfo, error) {
 		return nil, err
 	}
 
-	//log.Printf("Stat: out is %#v\n", out)
-
 	var matching []os.FileInfo
 
 	for _, cont := range out.Contents {
@@ -220,11 +218,8 @@ func (fs *S3StreamStore) checkParentDir(child string) error {
 	child = fs.noSlashPrefix(child)
 	child = fs.noSlashSuffix(child)
 
-	//log.Printf("checkParentDir : %s\n", child)
 	d, _ := filepath.Split(child)
-	//log.Printf("checkParentDir : d is  %s\n", d)
 	if d != "" {
-		//log.Printf("checkParentDir doing stat %s\n", d)
 		fi, err := fs.Stat(d)
 		if err != nil {
 			return err
@@ -247,7 +242,6 @@ func (fs *S3StreamStore) Remove(name string) error {
 			return err
 		}
 		if len(files) != 0 {
-			//log.Printf("dir not empty : files are %#v\n", files)
 			return fmt.Errorf("%s : directory not empty", name)
 		}
 	}
@@ -257,7 +251,6 @@ func (fs *S3StreamStore) Remove(name string) error {
 		Key:    aws.String(fs.fixTrailingSlash(name, fi.IsDir())),
 	}
 	_, err = fs.s3.DeleteObject(input)
-	//log.Printf("Remove : removed %s\nout is %#v\n", fi.Name(), out)
 	return err
 }
 
@@ -357,8 +350,6 @@ func (fs *S3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 		name = name[1:]
 	}
 
-	//log.Printf("Readdir in %s\n", name)
-
 	var results []os.FileInfo
 
 	input := &s3.ListObjectsV2Input{
@@ -371,10 +362,8 @@ func (fs *S3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-		//log.Printf("Readdir out is %#v\n", out)
 		for _, content := range out.Contents {
 			if *content.Key != name {
-				//log.Printf("Readdir : adding result for dir %s : %#v\n", name, *content)
 				result := &s3StatResult{
 					name:    strings.TrimPrefix(*content.Key, name),
 					modTime: *content.LastModified,
@@ -384,7 +373,6 @@ func (fs *S3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 			}
 		}
 		for _, prefix := range out.CommonPrefixes {
-			//log.Printf("Readdir : adding result for dir %s : %#v\n", name, *prefix)
 			result := &s3StatResult{
 				name:  fs.noSlashSuffix(strings.TrimPrefix(*prefix.Prefix, name)), // a bit confusing because prefix is used in different contexts here.
 				isDir: true,
