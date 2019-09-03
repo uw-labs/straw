@@ -27,7 +27,6 @@ const (
 var _ StreamStore = &S3StreamStore{}
 
 func NewS3StreamStore(bucket string, options ...S3Option) (*S3StreamStore, error) {
-
 	sess, err := session.NewSessionWithOptions(
 		session.Options{
 			SharedConfigState: session.SharedConfigEnable,
@@ -109,7 +108,7 @@ func (fs *S3StreamStore) Stat(name string) (os.FileInfo, error) {
 			matching = append(matching, &s3StatResult{
 				name:  fs.lastElem(name),
 				isDir: true,
-				//modTime: ??,
+				// modTime: ??,
 				size: 4096,
 			})
 		}
@@ -160,7 +159,6 @@ func (sr *s3StatResult) Sys() interface{} {
 }
 
 func (fs *S3StreamStore) OpenReadCloser(name string) (StrawReader, error) {
-
 	fi, err := fs.Stat(name)
 	if err != nil {
 		return nil, err
@@ -376,7 +374,7 @@ func (fs *S3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 			result := &s3StatResult{
 				name:  fs.noSlashSuffix(strings.TrimPrefix(*prefix.Prefix, name)), // a bit confusing because prefix is used in different contexts here.
 				isDir: true,
-				//modTime: ??
+				// modTime: ??
 				size: 4096,
 			}
 			results = append(results, result)
@@ -389,5 +387,4 @@ func (fs *S3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 
 		input.ContinuationToken = out.NextContinuationToken
 	}
-
 }

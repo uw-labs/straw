@@ -108,7 +108,6 @@ func (fst *fsTester) TestCreateWriteOnlyInExistingFile(t *testing.T) {
 	require.NotNil(err)
 	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "not a directory") }, "error does not match : %s", err.Error())
 	assert.Nil(f)
-
 }
 
 func (fst *fsTester) TestMkdirAtRoot(t *testing.T) {
@@ -503,7 +502,6 @@ func TestS3FS(t *testing.T) {
 }
 
 func testFS(t *testing.T, name string, fsProvider func() StreamStore, rootDir string) {
-
 	tester := &fsTester{name, nil, fsProvider, rootDir}
 
 	typ := reflect.TypeOf(tester)
@@ -539,5 +537,4 @@ func TestMkdirAllExistingNoError(t *testing.T) {
 
 	assert.NoError(MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
 	assert.NoError(MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
-
 }
