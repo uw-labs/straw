@@ -3,6 +3,7 @@ package straw
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -182,7 +183,53 @@ func (fs *S3StreamStore) OpenReadCloser(name string) (StrawReader, error) {
 		log.Printf("WARN: unhandled error type :  %T\n", err)
 		return nil, err
 	}
-	return out.Body, nil
+	return &S3Reader{out.Body, fs.s3, input}, nil
+}
+
+type S3Reader struct {
+	rc io.ReadCloser
+
+	s3    *s3.S3
+	input s3.GetObjectInput
+}
+
+func (r *S3Reader) Read(buf []byte) (int, error) {
+	return r.rc.Read(buf)
+}
+
+func (r *S3Reader) Close() error {
+	return r.rc.Close()
+}
+
+func (r *S3Reader) ReadAt(buf []byte, start int64) (int, error) {
+	end := int64(len(buf)) + start - 1
+	r.input.Range = aws.String(fmt.Sprintf("bytes=%d-%d", start, end))
+	out, err := r.s3.GetObject(&r.input)
+	if err != nil {
+		if e, ok := err.(awserr.Error); ok {
+			if e.Code() == s3.ErrCodeNoSuchKey {
+				return 0, os.ErrNotExist
+			}
+		}
+		log.Printf("WARN: unhandled error type :  %T\n", err)
+		return 0, err
+	}
+	all, err := ioutil.ReadAll(out.Body)
+	if err != nil {
+		_ = out.Body.Close()
+		return 0, err
+	}
+
+	copy(buf, all)
+
+	switch {
+	case len(all) == len(buf):
+		return len(all), nil
+	case len(all) < len(buf):
+		return len(all), io.EOF
+	default:
+		panic(fmt.Sprintf("only expected up to %d bytes but got %d", len(buf), len(all)))
+	}
 }
 
 func (fs *S3StreamStore) Mkdir(name string, mode os.FileMode) error {

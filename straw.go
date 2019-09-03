@@ -9,6 +9,7 @@ import (
 type StrawReader interface {
 	io.Reader
 	io.Closer
+	io.ReaderAt
 }
 
 type StrawWriter interface {
