@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -79,7 +78,19 @@ func (fs *MemStreamStore) OpenReadCloser(name string) (StrawReader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.NopCloser(bytes.NewReader(file.Content)), err
+	return newMemFileReader(file)
+}
+
+func newMemFileReader(mf *memFile) (*memFileReader, error) {
+	return &memFileReader{bytes.NewReader(mf.Content)}, nil
+}
+
+type memFileReader struct {
+	*bytes.Reader
+}
+
+func (mfr *memFileReader) Close() error {
+	return nil
 }
 
 func (fs *MemStreamStore) Mkdir(name string, mode os.FileMode) error {
