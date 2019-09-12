@@ -4,5 +4,5 @@ if [ "$S3_TEST_BUCKET" == "" ] ; then
 	exit -1
 fi
 
-aws --profile dev s3 rb --force s3://$S3_TEST_BUCKET/
-aws --profile dev s3 mb s3://$S3_TEST_BUCKET/
+aws s3 rb --force s3://$S3_TEST_BUCKET/
+aws s3 mb s3://$S3_TEST_BUCKET/
