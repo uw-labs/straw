@@ -180,7 +180,6 @@ func (fs *S3StreamStore) OpenReadCloser(name string) (StrawReader, error) {
 				return nil, os.ErrNotExist
 			}
 		}
-		log.Printf("WARN: unhandled error type :  %T\n", err)
 		return nil, err
 	}
 	return &S3Reader{out.Body, fs.s3, input}, nil
@@ -211,7 +210,6 @@ func (r *S3Reader) ReadAt(buf []byte, start int64) (int, error) {
 				return 0, os.ErrNotExist
 			}
 		}
-		log.Printf("WARN: unhandled error type :  %T\n", err)
 		return 0, err
 	}
 	all, err := ioutil.ReadAll(out.Body)
