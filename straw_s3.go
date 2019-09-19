@@ -220,9 +220,11 @@ func (r *S3Reader) ReadAt(buf []byte, start int64) (int, error) {
 
 	copy(buf, all)
 
+	err = out.Body.Close()
+
 	switch {
 	case len(all) == len(buf):
-		return len(all), nil
+		return len(all), err
 	case len(all) < len(buf):
 		return len(all), io.EOF
 	default:
