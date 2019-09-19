@@ -388,6 +388,120 @@ func (fst *fsTester) TestStat(t *testing.T) {
 	assert.Equal(true, fi.IsDir())
 }
 
+func (fst *fsTester) TestReadAtBasic(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	dir := filepath.Join(fst.testRoot, "TestReadAtBasic")
+	file := filepath.Join(dir, "file")
+
+	data := make([]byte, 64)
+	for i := range data {
+		data[i] = byte(i)
+	}
+
+	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.writeFile(fst.fs, file, data))
+
+	r, err := fst.fs.OpenReadCloser(file)
+	require.NoError(err)
+	assert.NotNil(r)
+
+	buf := make([]byte, 1024)
+
+	// read first 4 bytes
+	i, err := r.ReadAt(buf[0:4], 0)
+	assert.NoError(err)
+	assert.Equal(4, i)
+	assert.Equal(data[0:i], buf[0:i])
+
+	// read second 4 bytes
+	i, err = r.ReadAt(buf[0:4], 4)
+	assert.NoError(err)
+	assert.Equal(4, i)
+	assert.Equal(data[4:i+4], buf[0:i])
+
+	// read all bytes, but not past file end
+	i, err = r.ReadAt(buf[0:len(data)], 0)
+	assert.NoError(err)
+	assert.Equal(len(data), i)
+	assert.Equal(data, buf[0:i])
+
+	// read all bytes, and past file
+	i, err = r.ReadAt(buf, 0)
+	assert.Equal(io.EOF, err)
+	assert.Equal(len(data), i)
+	assert.Equal(data, buf[0:i])
+
+	// read first 4 bytes again, now that we've seen EOF.
+	i, err = r.ReadAt(buf[0:4], 0)
+	assert.NoError(err)
+	assert.Equal(4, i)
+	assert.Equal(data[0:i], buf[0:i])
+}
+
+func (fst *fsTester) TestReadAtWithRead(t *testing.T) {
+	// This test shows that ReadAt does not move the file position Read sees.
+
+	assert := assert.New(t)
+	require := require.New(t)
+
+	dir := filepath.Join(fst.testRoot, "TestReadAtWithRead")
+	file := filepath.Join(dir, "file")
+
+	data := make([]byte, 64)
+	for i := range data {
+		data[i] = byte(i)
+	}
+
+	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.writeFile(fst.fs, file, data))
+
+	r, err := fst.fs.OpenReadCloser(file)
+	require.NoError(err)
+	assert.NotNil(r)
+
+	buf := make([]byte, 1024)
+
+	// read 8 bytes, using Read
+	i, err := r.Read(buf[0:8])
+	assert.NoError(err)
+	assert.Equal(8, i)
+	assert.Equal(data[0:i], buf[0:i])
+
+	// read 4 bytes from position 40 using ReadAt
+	i, err = r.ReadAt(buf[0:4], 20)
+	assert.NoError(err)
+	assert.Equal(4, i)
+	assert.Equal(data[20:i+20], buf[0:i])
+
+	// read 8 bytes, using Read
+	i, err = r.Read(buf[0:8])
+	assert.NoError(err)
+	assert.Equal(8, i)
+	assert.Equal(data[8:i+8], buf[0:i])
+
+	// read to EOF, using Read
+	i, err = r.Read(buf)
+	// might get EOF now, or might be on next call.
+	if err == io.EOF {
+		assert.Equal(io.EOF, err)
+		assert.Equal(48, i)
+		assert.Equal(data[16:], buf[0:i])
+	} else {
+		i, err = r.Read(buf)
+		assert.Equal(io.EOF, err)
+		assert.Equal(0, i)
+	}
+
+	// readat should still work now.
+	i, err = r.ReadAt(buf[0:4], 20)
+	assert.NoError(err)
+	assert.Equal(4, i)
+	assert.Equal(data[20:i+20], buf[0:i])
+
+}
+
 func (fst *fsTester) writeFile(fs StreamStore, name string, data []byte) error {
 	w, err := fs.CreateWriteCloser(name)
 	if err != nil {
