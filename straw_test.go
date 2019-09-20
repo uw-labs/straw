@@ -665,7 +665,7 @@ func startSFTPServer() {
 	if err != nil {
 		log.Fatal("failed to listen for connection", err)
 	}
-	fmt.Printf("Listening on %v\n", listener.Addr())
+	log.Printf("Listening on %v\n", listener.Addr())
 
 	nConn, err := listener.Accept()
 	if err != nil {
