@@ -631,8 +631,7 @@ func TestSFTPFS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//testFS(t, "sftpfs", func() StreamStore { return &TestLogStreamStore{t, sftpfs} }, dir)
-	testFS(t, "sftpfs", func() StreamStore { return sftpfs }, dir)
+	testFS(t, "sftpfs", func() StreamStore { return &TestLogStreamStore{t, sftpfs} }, dir)
 }
 
 func startSFTPServer() {
