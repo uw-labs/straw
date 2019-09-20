@@ -1,6 +1,8 @@
 package straw
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,9 +13,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	"crypto/ed25519"
-	"crypto/rand"
 
 	"github.com/pkg/sftp"
 	"github.com/stretchr/testify/assert"
