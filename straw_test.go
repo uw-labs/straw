@@ -635,12 +635,8 @@ func TestSFTPFS(t *testing.T) {
 }
 
 func startSFTPServer() {
-	// An SSH server is represented by a ServerConfig, which holds
-	// certificate details and handles authentication of ServerConns.
 	config := &ssh.ServerConfig{
 		PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
-			// Should use constant-time compare (or better, salt+hash) in
-			// a production setting.
 			log.Printf("Login: %s\n", c.User())
 			if c.User() == "test" && string(pass) == "tiger" {
 				return nil, nil
@@ -672,22 +668,15 @@ func startSFTPServer() {
 		log.Fatal("failed to accept incoming connection", err)
 	}
 
-	// Before use, a handshake must be performed on the incoming
-	// net.Conn.
 	_, chans, reqs, err := ssh.NewServerConn(nConn, config)
 	if err != nil {
 		log.Fatal("failed to handshake", err)
 	}
 	log.Printf("SSH server established\n")
 
-	// The incoming Request channel must be serviced.
 	go ssh.DiscardRequests(reqs)
 
-	// Service the incoming Channel channel.
 	for newChannel := range chans {
-		// Channels have a type, depending on the application level
-		// protocol intended. In the case of an SFTP session, this is "subsystem"
-		// with a payload string of "<length=4>sftp"
 		log.Printf("Incoming channel: %s\n", newChannel.ChannelType())
 		if newChannel.ChannelType() != "session" {
 			newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
@@ -700,9 +689,6 @@ func startSFTPServer() {
 		}
 		log.Printf("Channel accepted\n")
 
-		// Sessions have out-of-band requests such as "shell",
-		// "pty-req" and "env".  Here we handle only the
-		// "subsystem" request.
 		go func(in <-chan *ssh.Request) {
 			for req := range in {
 				log.Printf("Request: %v\n", req.Type)
