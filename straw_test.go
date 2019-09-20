@@ -723,7 +723,7 @@ func startSFTPServer() {
 		}(requests)
 
 		serverOptions := []sftp.ServerOption{
-			sftp.WithDebug(debugStream),
+			sftp.WithDebug(log.Writer()),
 		}
 
 		server, err := sftp.NewServer(
