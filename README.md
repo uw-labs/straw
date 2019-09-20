@@ -6,7 +6,7 @@ Straw
 
 Straw is a streaming I/O abstraction, intended to provide a nice way to interact with various stream (blob) storage backends.
 
-Currently it supports local filesystem and aws s3 as storage options.
+Currently it supports local filesystem aws s3, and sftp as storage options.
 
 It is not intended to be a general purpose VFS style API, instead focussing on cleanly and portably supporting streaming reads and streaming writes of entire objects.
 

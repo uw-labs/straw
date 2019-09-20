@@ -1,18 +1,23 @@
 package straw
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/pkg/sftp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 )
 
 type fsTester struct {
@@ -613,6 +618,111 @@ func TestS3FS(t *testing.T) {
 		t.Fatal(err)
 	}
 	testFS(t, "s3fs", func() StreamStore { return &TestLogStreamStore{t, s3fs} }, "/")
+}
+
+func TestSFTPFS(t *testing.T) {
+	go startSFTPServer()
+
+	sftpfs, err := NewSFTPStreamStore("sftp://test:tiger@localhost:9922/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir, err := ioutil.TempDir("", "straw_sftp_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testFS(t, "sftpfs", func() StreamStore { return &TestLogStreamStore{t, sftpfs} }, dir)
+}
+
+func startSFTPServer() {
+	config := &ssh.ServerConfig{
+		PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
+			log.Printf("Login: %s\n", c.User())
+			if c.User() == "test" && string(pass) == "tiger" {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("password rejected for %q", c.User())
+		},
+	}
+
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	private, err := ssh.NewSignerFromKey(priv)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	config.AddHostKey(private)
+
+	listener, err := net.Listen("tcp", "0.0.0.0:9922")
+	if err != nil {
+		log.Fatal("failed to listen for connection", err)
+	}
+	log.Printf("Listening on %v\n", listener.Addr())
+
+	nConn, err := listener.Accept()
+	if err != nil {
+		log.Fatal("failed to accept incoming connection", err)
+	}
+
+	_, chans, reqs, err := ssh.NewServerConn(nConn, config)
+	if err != nil {
+		log.Fatal("failed to handshake", err)
+	}
+	log.Printf("SSH server established\n")
+
+	go ssh.DiscardRequests(reqs)
+
+	for newChannel := range chans {
+		log.Printf("Incoming channel: %s\n", newChannel.ChannelType())
+		if newChannel.ChannelType() != "session" {
+			newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
+			log.Printf("Unknown channel type: %s\n", newChannel.ChannelType())
+			continue
+		}
+		channel, requests, err := newChannel.Accept()
+		if err != nil {
+			log.Fatal("could not accept channel.", err)
+		}
+		log.Printf("Channel accepted\n")
+
+		go func(in <-chan *ssh.Request) {
+			for req := range in {
+				log.Printf("Request: %v\n", req.Type)
+				ok := false
+				switch req.Type {
+				case "subsystem":
+					log.Printf("Subsystem: %s\n", req.Payload[4:])
+					if string(req.Payload[4:]) == "sftp" {
+						ok = true
+					}
+				}
+				log.Printf(" - accepted: %v\n", ok)
+				req.Reply(ok, nil)
+			}
+		}(requests)
+
+		serverOptions := []sftp.ServerOption{
+			sftp.WithDebug(log.Writer()),
+		}
+
+		server, err := sftp.NewServer(
+			channel,
+			serverOptions...,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := server.Serve(); err == io.EOF {
+			server.Close()
+			log.Print("sftp client exited session.")
+		} else if err != nil {
+			log.Fatal("sftp server completed with error:", err)
+		}
+	}
 }
 
 func testFS(t *testing.T, name string, fsProvider func() StreamStore, rootDir string) {
