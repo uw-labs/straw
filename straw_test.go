@@ -635,16 +635,13 @@ func TestSFTPFS(t *testing.T) {
 }
 
 func startSFTPServer() {
-	//	debugStream := ioutil.Discard
-	debugStream := os.Stderr
-
 	// An SSH server is represented by a ServerConfig, which holds
 	// certificate details and handles authentication of ServerConns.
 	config := &ssh.ServerConfig{
 		PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
 			// Should use constant-time compare (or better, salt+hash) in
 			// a production setting.
-			fmt.Fprintf(debugStream, "Login: %s\n", c.User())
+			log.Printf("Login: %s\n", c.User())
 			if c.User() == "test" && string(pass) == "tiger" {
 				return nil, nil
 			}
@@ -681,7 +678,7 @@ func startSFTPServer() {
 	if err != nil {
 		log.Fatal("failed to handshake", err)
 	}
-	fmt.Fprintf(debugStream, "SSH server established\n")
+	log.Printf("SSH server established\n")
 
 	// The incoming Request channel must be serviced.
 	go ssh.DiscardRequests(reqs)
@@ -691,33 +688,33 @@ func startSFTPServer() {
 		// Channels have a type, depending on the application level
 		// protocol intended. In the case of an SFTP session, this is "subsystem"
 		// with a payload string of "<length=4>sftp"
-		fmt.Fprintf(debugStream, "Incoming channel: %s\n", newChannel.ChannelType())
+		log.Printf("Incoming channel: %s\n", newChannel.ChannelType())
 		if newChannel.ChannelType() != "session" {
 			newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
-			fmt.Fprintf(debugStream, "Unknown channel type: %s\n", newChannel.ChannelType())
+			log.Printf("Unknown channel type: %s\n", newChannel.ChannelType())
 			continue
 		}
 		channel, requests, err := newChannel.Accept()
 		if err != nil {
 			log.Fatal("could not accept channel.", err)
 		}
-		fmt.Fprintf(debugStream, "Channel accepted\n")
+		log.Printf("Channel accepted\n")
 
 		// Sessions have out-of-band requests such as "shell",
 		// "pty-req" and "env".  Here we handle only the
 		// "subsystem" request.
 		go func(in <-chan *ssh.Request) {
 			for req := range in {
-				fmt.Fprintf(debugStream, "Request: %v\n", req.Type)
+				log.Printf("Request: %v\n", req.Type)
 				ok := false
 				switch req.Type {
 				case "subsystem":
-					fmt.Fprintf(debugStream, "Subsystem: %s\n", req.Payload[4:])
+					log.Printf("Subsystem: %s\n", req.Payload[4:])
 					if string(req.Payload[4:]) == "sftp" {
 						ok = true
 					}
 				}
-				fmt.Fprintf(debugStream, " - accepted: %v\n", ok)
+				log.Printf(" - accepted: %v\n", ok)
 				req.Reply(ok, nil)
 			}
 		}(requests)
