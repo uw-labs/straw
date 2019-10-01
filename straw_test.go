@@ -620,6 +620,23 @@ func TestS3FS(t *testing.T) {
 	testFS(t, "s3fs", func() StreamStore { return &TestLogStreamStore{t, s3fs} }, "/")
 }
 
+func TestGCSFS(t *testing.T) {
+	testBucket := os.Getenv("GCS_TEST_BUCKET")
+	if testBucket == "" {
+		t.Skip("GCS_TEST_BUCKET not set, skipping tests for gcs backend")
+	}
+	testGCSCredentials := os.Getenv("GCS_TEST_CREDENTIALS_FILE")
+	if testGCSCredentials == "" {
+		t.Skip("GCS_TEST_CREDENTIALS_FILE not set, skipping tests for gcs backend")
+	}
+
+	gcsFs, err := NewGCSStreamStore(testGCSCredentials, testBucket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testFS(t, "gcsfs", func() StreamStore { return &TestLogStreamStore{t, gcsFs} }, "/")
+}
+
 func TestSFTPFS(t *testing.T) {
 	go startSFTPServer()
 
