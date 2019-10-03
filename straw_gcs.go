@@ -17,7 +17,7 @@ import (
 
 var _ StreamStore = &GCSStreamStore{}
 
-func NewGCSStreamStore(credentialsFile string, bucket string, options ...S3Option) (*GCSStreamStore, error) {
+func NewGCSStreamStore(credentialsFile string, bucket string) (*GCSStreamStore, error) {
 	ctx := context.Background()
 	gcsClient, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialsFile))
 	if err != nil {
