@@ -272,14 +272,11 @@ func (fs *GCSStreamStore) noSlashSuffix(s string) string {
 }
 
 func (fs *GCSStreamStore) fixTrailingSlash(s string, wantSlash bool) string {
-	if wantSlash {
-		if !strings.HasSuffix(s, "/") {
-			return s + "/"
-		}
-	} else {
-		if strings.HasSuffix(s, "/") {
-			return s[0 : len(s)-1]
-		}
+	if !wantSlash {
+		return strings.TrimSuffix(s, "/")
+	}
+	if !strings.HasSuffix(s, "/") {
+		return s + "/"
 	}
 	return s
 }
