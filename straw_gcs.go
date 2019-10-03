@@ -252,12 +252,7 @@ func (fs *GCSStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 		return nil, fmt.Errorf("%s is a directory", name)
 	}
 
-	w := fs.client.Bucket(fs.bucket).Object(name).NewWriter(context.Background())
-
-	ul := &gcsUploader{
-		w,
-	}
-	return ul, nil
+	return fs.client.Bucket(fs.bucket).Object(name).NewWriter(context.Background()), nil
 }
 
 func (fs *GCSStreamStore) noSlashPrefix(s string) string {
@@ -284,18 +279,6 @@ func (fs *GCSStreamStore) fixTrailingSlash(s string, wantSlash bool) string {
 func (fs *GCSStreamStore) lastElem(s string) string {
 	_, f := filepath.Split(fs.noSlashSuffix(s))
 	return f
-}
-
-type gcsUploader struct {
-	wc io.WriteCloser
-}
-
-func (wc *gcsUploader) Write(data []byte) (int, error) {
-	return wc.wc.Write(data)
-}
-
-func (wc *gcsUploader) Close() error {
-	return wc.wc.Close()
 }
 
 func (fs *GCSStreamStore) Readdir(name string) ([]os.FileInfo, error) {
