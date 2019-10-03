@@ -153,17 +153,9 @@ func (fs *GCSStreamStore) OpenReadCloser(name string) (StrawReader, error) {
 }
 
 type GCSReader struct {
-	rc      *storage.Reader
+	*storage.Reader
 	ss      *GCSStreamStore
 	objName string
-}
-
-func (r *GCSReader) Read(buf []byte) (int, error) {
-	return r.rc.Read(buf)
-}
-
-func (r *GCSReader) Close() error {
-	return r.rc.Close()
 }
 
 func (r *GCSReader) ReadAt(buf []byte, start int64) (int, error) {
