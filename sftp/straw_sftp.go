@@ -1,4 +1,4 @@
-package straw
+package sftp
 
 import (
 	"errors"
@@ -12,10 +12,17 @@ import (
 	"sync"
 
 	"github.com/pkg/sftp"
+	"github.com/uw-labs/straw"
 	"golang.org/x/crypto/ssh"
 )
 
-var _ StreamStore = &SFTPStreamStore{}
+var _ straw.StreamStore = &SFTPStreamStore{}
+
+func init() {
+	straw.Register("sftp", func(u *url.URL) (straw.StreamStore, error) {
+		return NewSFTPStreamStore(u.String())
+	})
+}
 
 type SFTPStreamStore struct {
 	sshClient  *ssh.Client
@@ -74,7 +81,7 @@ func (s *SFTPStreamStore) Mkdir(path string, mode os.FileMode) error {
 	return err
 }
 
-func (s *SFTPStreamStore) OpenReadCloser(name string) (StrawReader, error) {
+func (s *SFTPStreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
 	sr, err := s.sftpClient.Open(name)
 	if err != nil {
 		return nil, err
@@ -99,7 +106,7 @@ func (s *SFTPStreamStore) Remove(name string) error {
 	return err
 }
 
-func (s *SFTPStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
+func (s *SFTPStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
 	fi, err := s.Stat(name)
 	if err == nil && fi.IsDir() {
 		return nil, fmt.Errorf("%s is a directory", name)

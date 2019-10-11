@@ -1,9 +1,10 @@
-package straw
+package gcs
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -11,11 +12,22 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/uw-labs/straw"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
-var _ StreamStore = &GCSStreamStore{}
+var _ straw.StreamStore = &GCSStreamStore{}
+
+func init() {
+	straw.Register("gs", func(u *url.URL) (straw.StreamStore, error) {
+		creds := u.Query().Get("credentialsfile")
+		if creds == "" {
+			return nil, fmt.Errorf("gs URLs must provide a `credentialsfile` parameter")
+		}
+		return NewGCSStreamStore(creds, u.Host)
+	})
+}
 
 func NewGCSStreamStore(credentialsFile string, bucket string) (*GCSStreamStore, error) {
 	ctx := context.Background()
@@ -131,7 +143,7 @@ func (sr *gcsStatResult) Sys() interface{} {
 	return nil
 }
 
-func (fs *GCSStreamStore) OpenReadCloser(name string) (StrawReader, error) {
+func (fs *GCSStreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
 	fi, err := fs.Stat(name)
 	if err != nil {
 		return nil, err
@@ -233,7 +245,7 @@ func (fs *GCSStreamStore) Remove(name string) error {
 	return fs.client.Bucket(fs.bucket).Object(name).Delete(context.Background())
 }
 
-func (fs *GCSStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
+func (fs *GCSStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
 	name = fs.noSlashPrefix(name)
 
 	if err := fs.checkParentDir(name); err != nil {
