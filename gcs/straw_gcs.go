@@ -17,7 +17,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-var _ straw.StreamStore = &GCSStreamStore{}
+var _ straw.StreamStore = &gcsStreamStore{}
 
 func init() {
 	straw.Register("gs", func(u *url.URL) (straw.StreamStore, error) {
@@ -25,18 +25,18 @@ func init() {
 		if creds == "" {
 			return nil, fmt.Errorf("gs URLs must provide a `credentialsfile` parameter")
 		}
-		return NewGCSStreamStore(creds, u.Host)
+		return newGCSStreamStore(creds, u.Host)
 	})
 }
 
-func NewGCSStreamStore(credentialsFile string, bucket string) (*GCSStreamStore, error) {
+func newGCSStreamStore(credentialsFile string, bucket string) (*gcsStreamStore, error) {
 	ctx := context.Background()
 	gcsClient, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialsFile))
 	if err != nil {
 		return nil, err
 	}
 
-	ss := &GCSStreamStore{
+	ss := &gcsStreamStore{
 		client: gcsClient,
 		bucket: bucket,
 	}
@@ -44,17 +44,17 @@ func NewGCSStreamStore(credentialsFile string, bucket string) (*GCSStreamStore, 
 	return ss, nil
 }
 
-type GCSStreamStore struct {
+type gcsStreamStore struct {
 	client *storage.Client
 	bucket string
 }
 
-func (fs *GCSStreamStore) Lstat(name string) (os.FileInfo, error) {
+func (fs *gcsStreamStore) Lstat(name string) (os.FileInfo, error) {
 	// GCS does not support symlinks
 	return fs.Stat(name)
 }
 
-func (fs *GCSStreamStore) Stat(name string) (os.FileInfo, error) {
+func (fs *gcsStreamStore) Stat(name string) (os.FileInfo, error) {
 	name = fs.noSlashPrefix(name)
 	name = fs.noSlashSuffix(name)
 
@@ -143,7 +143,7 @@ func (sr *gcsStatResult) Sys() interface{} {
 	return nil
 }
 
-func (fs *GCSStreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
+func (fs *gcsStreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
 	fi, err := fs.Stat(name)
 	if err != nil {
 		return nil, err
@@ -161,16 +161,16 @@ func (fs *GCSStreamStore) OpenReadCloser(name string) (straw.StrawReader, error)
 		return nil, err
 	}
 
-	return &GCSReader{r, fs, nameNoSlash}, nil
+	return &gcsReader{r, fs, nameNoSlash}, nil
 }
 
-type GCSReader struct {
+type gcsReader struct {
 	*storage.Reader
-	ss      *GCSStreamStore
+	ss      *gcsStreamStore
 	objName string
 }
 
-func (r *GCSReader) ReadAt(buf []byte, start int64) (int, error) {
+func (r *gcsReader) ReadAt(buf []byte, start int64) (int, error) {
 	rdr, err := r.ss.client.Bucket(r.ss.bucket).Object(r.objName).NewRangeReader(context.Background(), start, int64(len(buf)))
 	if err != nil {
 		return 0, err
@@ -183,7 +183,7 @@ func (r *GCSReader) ReadAt(buf []byte, start int64) (int, error) {
 	return i, err
 }
 
-func (fs *GCSStreamStore) Mkdir(name string, mode os.FileMode) error {
+func (fs *gcsStreamStore) Mkdir(name string, mode os.FileMode) error {
 	if !strings.HasSuffix(name, "/") {
 		name = name + "/"
 	}
@@ -207,7 +207,7 @@ func (fs *GCSStreamStore) Mkdir(name string, mode os.FileMode) error {
 	return w.Close()
 }
 
-func (fs *GCSStreamStore) checkParentDir(child string) error {
+func (fs *gcsStreamStore) checkParentDir(child string) error {
 	child = fs.noSlashPrefix(child)
 	child = fs.noSlashSuffix(child)
 
@@ -224,7 +224,7 @@ func (fs *GCSStreamStore) checkParentDir(child string) error {
 	return nil
 }
 
-func (fs *GCSStreamStore) Remove(name string) error {
+func (fs *gcsStreamStore) Remove(name string) error {
 	fi, err := fs.Stat(name)
 	if err != nil {
 		return err
@@ -245,7 +245,7 @@ func (fs *GCSStreamStore) Remove(name string) error {
 	return fs.client.Bucket(fs.bucket).Object(name).Delete(context.Background())
 }
 
-func (fs *GCSStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
+func (fs *gcsStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
 	name = fs.noSlashPrefix(name)
 
 	if err := fs.checkParentDir(name); err != nil {
@@ -259,18 +259,18 @@ func (fs *GCSStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, err
 	return fs.client.Bucket(fs.bucket).Object(name).NewWriter(context.Background()), nil
 }
 
-func (fs *GCSStreamStore) noSlashPrefix(s string) string {
+func (fs *gcsStreamStore) noSlashPrefix(s string) string {
 	return strings.TrimPrefix(s, "/")
 }
 
-func (fs *GCSStreamStore) noSlashSuffix(s string) string {
+func (fs *gcsStreamStore) noSlashSuffix(s string) string {
 	if strings.HasSuffix(s, "/") {
 		return s[:len(s)-1]
 	}
 	return s
 }
 
-func (fs *GCSStreamStore) fixTrailingSlash(s string, wantSlash bool) string {
+func (fs *gcsStreamStore) fixTrailingSlash(s string, wantSlash bool) string {
 	if !wantSlash {
 		return strings.TrimSuffix(s, "/")
 	}
@@ -280,12 +280,12 @@ func (fs *GCSStreamStore) fixTrailingSlash(s string, wantSlash bool) string {
 	return s
 }
 
-func (fs *GCSStreamStore) lastElem(s string) string {
+func (fs *gcsStreamStore) lastElem(s string) string {
 	_, f := filepath.Split(fs.noSlashSuffix(s))
 	return f
 }
 
-func (fs *GCSStreamStore) Readdir(name string) ([]os.FileInfo, error) {
+func (fs *gcsStreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	if !strings.HasSuffix(name, "/") {
 		name = name + "/"
 	}
