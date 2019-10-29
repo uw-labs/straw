@@ -19,6 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uw-labs/straw"
 	"golang.org/x/crypto/ssh"
+
+	_ "github.com/uw-labs/straw/gcs"
+	_ "github.com/uw-labs/straw/s3"
+	_ "github.com/uw-labs/straw/sftp"
 )
 
 type fsTester struct {
@@ -614,7 +618,7 @@ func TestS3FS(t *testing.T) {
 		t.Skip("S3_TEST_BUCKET not set, skipping tests for s3 backend")
 	}
 
-	s3fs, err := straw.NewS3StreamStore(testBucket)
+	s3fs, err := straw.Open(fmt.Sprintf("s3://%s/", testBucket))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -631,7 +635,7 @@ func TestGCSFS(t *testing.T) {
 		t.Skip("GCS_TEST_CREDENTIALS_FILE not set, skipping tests for gcs backend")
 	}
 
-	gcsFs, err := straw.NewGCSStreamStore(testGCSCredentials, testBucket)
+	gcsFs, err := straw.Open(fmt.Sprintf("gs://%s/?credentialsfile=%s", testBucket, testGCSCredentials))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -641,7 +645,7 @@ func TestGCSFS(t *testing.T) {
 func TestSFTPFS(t *testing.T) {
 	go startSFTPServer()
 
-	sftpfs, err := straw.NewSFTPStreamStore("sftp://test:tiger@localhost:9922/")
+	sftpfs, err := straw.Open("sftp://test:tiger@localhost:9922/")
 	if err != nil {
 		t.Fatal(err)
 	}
