@@ -12,7 +12,7 @@ import (
 func TestWalk(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := straw.NewMemStreamStore()
+	ss, _ := straw.Open("mem://")
 
 	ss.Mkdir("a", 0755)
 	writeFile(ss, "a/1")
@@ -41,7 +41,7 @@ func TestWalk(t *testing.T) {
 func TestWalkSkipDir(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := straw.NewMemStreamStore()
+	ss, _ := straw.Open("mem://")
 
 	ss.Mkdir("a", 0755)
 	writeFile(ss, "a/1")
@@ -73,7 +73,7 @@ func TestWalkSkipDir(t *testing.T) {
 func TestWalkExitOnErr(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := straw.NewMemStreamStore()
+	ss, _ := straw.Open("mem://")
 
 	ss.Mkdir("a", 0755)
 	writeFile(ss, "a/1")
@@ -106,7 +106,7 @@ func TestWalkExitOnErr(t *testing.T) {
 func TestWalkRootNotExist(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := straw.NewMemStreamStore()
+	ss, _ := straw.Open("mem://")
 
 	err := straw.Walk(ss, "/this/doesnt/exist", func(name string, fi os.FileInfo, err error) error {
 		if err != nil {

@@ -613,7 +613,8 @@ func TestOSFS(t *testing.T) {
 }
 
 func TestMemFS(t *testing.T) {
-	testFS(t, "memfs", func() straw.StreamStore { return &TestLogStreamStore{t, straw.NewMemStreamStore()} }, "/")
+	ss, _ := straw.Open("mem://")
+	testFS(t, "memfs", func() straw.StreamStore { return &TestLogStreamStore{t, ss} }, "/")
 }
 
 func TestS3FS(t *testing.T) {
@@ -769,7 +770,7 @@ func testFS(t *testing.T, name string, fsProvider func() straw.StreamStore, root
 func TestMkdirAll(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := straw.NewMemStreamStore()
+	ss, _ := straw.Open("mem://")
 
 	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
 
@@ -783,7 +784,7 @@ func TestMkdirAll(t *testing.T) {
 func TestMkdirAllExistingNoError(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := straw.NewMemStreamStore()
+	ss, _ := straw.Open("mem://")
 
 	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
 	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
