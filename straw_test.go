@@ -1,4 +1,4 @@
-package straw
+package straw_test
 
 import (
 	"crypto/ed25519"
@@ -17,13 +17,18 @@ import (
 	"github.com/pkg/sftp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uw-labs/straw"
 	"golang.org/x/crypto/ssh"
+
+	_ "github.com/uw-labs/straw/gcs"
+	_ "github.com/uw-labs/straw/s3"
+	_ "github.com/uw-labs/straw/sftp"
 )
 
 type fsTester struct {
 	name     string
-	fs       StreamStore
-	ff       func() StreamStore
+	fs       straw.StreamStore
+	ff       func() straw.StreamStore
 	testRoot string
 }
 
@@ -507,7 +512,7 @@ func (fst *fsTester) TestReadAtWithRead(t *testing.T) {
 
 }
 
-func (fst *fsTester) writeFile(fs StreamStore, name string, data []byte) error {
+func (fst *fsTester) writeFile(fs straw.StreamStore, name string, data []byte) error {
 	w, err := fs.CreateWriteCloser(name)
 	if err != nil {
 		return err
@@ -600,11 +605,11 @@ func tempDir() string {
 }
 
 func TestOSFS(t *testing.T) {
-	testFS(t, "osfs", func() StreamStore { return &TestLogStreamStore{t, &OsStreamStore{}} }, tempDir())
+	testFS(t, "osfs", func() straw.StreamStore { return &TestLogStreamStore{t, &straw.OsStreamStore{}} }, tempDir())
 }
 
 func TestMemFS(t *testing.T) {
-	testFS(t, "memfs", func() StreamStore { return &TestLogStreamStore{t, NewMemStreamStore()} }, "/")
+	testFS(t, "memfs", func() straw.StreamStore { return &TestLogStreamStore{t, straw.NewMemStreamStore()} }, "/")
 }
 
 func TestS3FS(t *testing.T) {
@@ -613,11 +618,11 @@ func TestS3FS(t *testing.T) {
 		t.Skip("S3_TEST_BUCKET not set, skipping tests for s3 backend")
 	}
 
-	s3fs, err := NewS3StreamStore(testBucket)
+	s3fs, err := straw.Open(fmt.Sprintf("s3://%s/", testBucket))
 	if err != nil {
 		t.Fatal(err)
 	}
-	testFS(t, "s3fs", func() StreamStore { return &TestLogStreamStore{t, s3fs} }, "/")
+	testFS(t, "s3fs", func() straw.StreamStore { return &TestLogStreamStore{t, s3fs} }, "/")
 }
 
 func TestGCSFS(t *testing.T) {
@@ -630,17 +635,17 @@ func TestGCSFS(t *testing.T) {
 		t.Skip("GCS_TEST_CREDENTIALS_FILE not set, skipping tests for gcs backend")
 	}
 
-	gcsFs, err := NewGCSStreamStore(testGCSCredentials, testBucket)
+	gcsFs, err := straw.Open(fmt.Sprintf("gs://%s/?credentialsfile=%s", testBucket, testGCSCredentials))
 	if err != nil {
 		t.Fatal(err)
 	}
-	testFS(t, "gcsfs", func() StreamStore { return &TestLogStreamStore{t, gcsFs} }, "/")
+	testFS(t, "gcsfs", func() straw.StreamStore { return &TestLogStreamStore{t, gcsFs} }, "/")
 }
 
 func TestSFTPFS(t *testing.T) {
 	go startSFTPServer()
 
-	sftpfs, err := NewSFTPStreamStore("sftp://test:tiger@localhost:9922/")
+	sftpfs, err := straw.Open("sftp://test:tiger@localhost:9922/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -648,7 +653,7 @@ func TestSFTPFS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testFS(t, "sftpfs", func() StreamStore { return &TestLogStreamStore{t, sftpfs} }, dir)
+	testFS(t, "sftpfs", func() straw.StreamStore { return &TestLogStreamStore{t, sftpfs} }, dir)
 }
 
 func startSFTPServer() {
@@ -742,7 +747,7 @@ func startSFTPServer() {
 	}
 }
 
-func testFS(t *testing.T, name string, fsProvider func() StreamStore, rootDir string) {
+func testFS(t *testing.T, name string, fsProvider func() straw.StreamStore, rootDir string) {
 	tester := &fsTester{name, nil, fsProvider, rootDir}
 
 	typ := reflect.TypeOf(tester)
@@ -760,9 +765,9 @@ func testFS(t *testing.T, name string, fsProvider func() StreamStore, rootDir st
 func TestMkdirAll(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := NewMemStreamStore()
+	ss := straw.NewMemStreamStore()
 
-	assert.NoError(MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
+	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
 
 	fis, err := ss.Readdir("/foo/bar/baz/qux/")
 	assert.NoError(err)
@@ -774,8 +779,8 @@ func TestMkdirAll(t *testing.T) {
 func TestMkdirAllExistingNoError(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := NewMemStreamStore()
+	ss := straw.NewMemStreamStore()
 
-	assert.NoError(MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
-	assert.NoError(MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
+	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
+	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
 }

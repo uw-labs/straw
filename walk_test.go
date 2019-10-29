@@ -1,4 +1,4 @@
-package straw
+package straw_test
 
 import (
 	"errors"
@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uw-labs/straw"
 )
 
 func TestWalk(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := NewMemStreamStore()
+	ss := straw.NewMemStreamStore()
 
 	ss.Mkdir("a", 0755)
 	writeFile(ss, "a/1")
@@ -22,7 +23,7 @@ func TestWalk(t *testing.T) {
 	var fiNames []string
 	var fiIsDirs []bool
 
-	err := Walk(ss, "/", func(name string, fi os.FileInfo, err error) error {
+	err := straw.Walk(ss, "/", func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -40,7 +41,7 @@ func TestWalk(t *testing.T) {
 func TestWalkSkipDir(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := NewMemStreamStore()
+	ss := straw.NewMemStreamStore()
 
 	ss.Mkdir("a", 0755)
 	writeFile(ss, "a/1")
@@ -51,12 +52,12 @@ func TestWalkSkipDir(t *testing.T) {
 	var fiNames []string
 	var fiIsDirs []bool
 
-	err := Walk(ss, "/", func(name string, fi os.FileInfo, err error) error {
+	err := straw.Walk(ss, "/", func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if name == "/a" {
-			return SkipDir
+			return straw.SkipDir
 		}
 		found = append(found, name)
 		fiNames = append(fiNames, fi.Name())
@@ -72,7 +73,7 @@ func TestWalkSkipDir(t *testing.T) {
 func TestWalkExitOnErr(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := NewMemStreamStore()
+	ss := straw.NewMemStreamStore()
 
 	ss.Mkdir("a", 0755)
 	writeFile(ss, "a/1")
@@ -85,7 +86,7 @@ func TestWalkExitOnErr(t *testing.T) {
 
 	someError := errors.New("some random error")
 
-	err := Walk(ss, "/", func(name string, fi os.FileInfo, err error) error {
+	err := straw.Walk(ss, "/", func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -105,9 +106,9 @@ func TestWalkExitOnErr(t *testing.T) {
 func TestWalkRootNotExist(t *testing.T) {
 	assert := assert.New(t)
 
-	ss := NewMemStreamStore()
+	ss := straw.NewMemStreamStore()
 
-	err := Walk(ss, "/this/doesnt/exist", func(name string, fi os.FileInfo, err error) error {
+	err := straw.Walk(ss, "/this/doesnt/exist", func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -116,7 +117,7 @@ func TestWalkRootNotExist(t *testing.T) {
 	assert.Error(err, "file does not exist")
 }
 
-func writeFile(ss StreamStore, name string) {
+func writeFile(ss straw.StreamStore, name string) {
 	wc, _ := ss.CreateWriteCloser(name)
 	wc.Write([]byte{0})
 	wc.Close()

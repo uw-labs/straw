@@ -1,17 +1,19 @@
-package straw
+package straw_test
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/uw-labs/straw"
 )
 
-var _ StreamStore = &TestLogStreamStore{}
+var _ straw.StreamStore = &TestLogStreamStore{}
 
 type TestLogStreamStore struct {
 	t       *testing.T
-	wrapped StreamStore
+	wrapped straw.StreamStore
 }
 
 func (fs *TestLogStreamStore) Lstat(name string) (os.FileInfo, error) {
@@ -26,7 +28,7 @@ func (fs *TestLogStreamStore) Stat(name string) (os.FileInfo, error) {
 	return fs.wrapped.Stat(name)
 }
 
-func (fs *TestLogStreamStore) OpenReadCloser(name string) (StrawReader, error) {
+func (fs *TestLogStreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
 	fs.before("Open", name)
 	defer fs.after("Open", name)
 	return fs.wrapped.OpenReadCloser(name)
@@ -44,7 +46,7 @@ func (fs *TestLogStreamStore) Remove(name string) error {
 	return fs.wrapped.Remove(name)
 }
 
-func (fs *TestLogStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
+func (fs *TestLogStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
 	fs.before("CreateWriteOnly", name)
 	defer fs.after("CreateWriteOnly", name)
 	return fs.wrapped.CreateWriteCloser(name)
