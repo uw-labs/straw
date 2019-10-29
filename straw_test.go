@@ -605,7 +605,11 @@ func tempDir() string {
 }
 
 func TestOSFS(t *testing.T) {
-	testFS(t, "osfs", func() straw.StreamStore { return &TestLogStreamStore{t, &straw.OsStreamStore{}} }, tempDir())
+	osfs, err := straw.Open("file:///")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testFS(t, "osfs", func() straw.StreamStore { return &TestLogStreamStore{t, osfs} }, tempDir())
 }
 
 func TestMemFS(t *testing.T) {
