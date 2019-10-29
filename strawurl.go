@@ -24,6 +24,6 @@ func Open(u string) (StreamStore, error) {
 func init() {
 	// the only "built in" backend is "file"
 	Register("file", func(u *url.URL) (StreamStore, error) {
-		return &OsStreamStore{}, nil
+		return &osStreamStore{}, nil
 	})
 }

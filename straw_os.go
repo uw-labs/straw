@@ -6,24 +6,24 @@ import (
 	"sort"
 )
 
-var _ StreamStore = &OsStreamStore{}
+var _ StreamStore = &osStreamStore{}
 
-type OsStreamStore struct {
+type osStreamStore struct {
 }
 
-func (_ *OsStreamStore) Lstat(filename string) (os.FileInfo, error) {
+func (_ *osStreamStore) Lstat(filename string) (os.FileInfo, error) {
 	return os.Lstat(filename)
 }
 
-func (_ *OsStreamStore) Stat(filename string) (os.FileInfo, error) {
+func (_ *osStreamStore) Stat(filename string) (os.FileInfo, error) {
 	return os.Stat(filename)
 }
 
-func (_ *OsStreamStore) Mkdir(path string, mode os.FileMode) error {
+func (_ *osStreamStore) Mkdir(path string, mode os.FileMode) error {
 	return os.Mkdir(path, mode)
 }
 
-func (_ *OsStreamStore) OpenReadCloser(name string) (StrawReader, error) {
+func (_ *osStreamStore) OpenReadCloser(name string) (StrawReader, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
@@ -40,15 +40,15 @@ func (_ *OsStreamStore) OpenReadCloser(name string) (StrawReader, error) {
 	return f, nil
 }
 
-func (_ *OsStreamStore) Remove(name string) error {
+func (_ *osStreamStore) Remove(name string) error {
 	return os.Remove(name)
 }
 
-func (_ *OsStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
+func (_ *osStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
 	return os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
-func (_ *OsStreamStore) Readdir(name string) ([]os.FileInfo, error) {
+func (_ *osStreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
