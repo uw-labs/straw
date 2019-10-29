@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -20,31 +19,15 @@ import (
 	"github.com/uw-labs/straw"
 )
 
-type ServerSideEncryptionType string
-
-const (
-	ServerSideEncryptionTypeNone   ServerSideEncryptionType = ""
-	ServerSideEncryptionTypeAES256 ServerSideEncryptionType = "AES256"
-)
-
 var _ straw.StreamStore = &s3StreamStore{}
 
 func init() {
 	straw.Register("s3", func(u *url.URL) (straw.StreamStore, error) {
-		sse := u.Query().Get("sse")
-		var opts []s3Option
-		switch sse {
-		case "":
-		case "AES256":
-			opts = append(opts, S3ServerSideEncoding(ServerSideEncryptionTypeAES256))
-		default:
-			return nil, fmt.Errorf("unknown server side encryption type '%s'", sse)
-		}
-		return news3StreamStore(u.Host, opts...)
+		return news3StreamStore(u.Host, u.Query().Get("sse"))
 	})
 }
 
-func news3StreamStore(bucket string, options ...s3Option) (*s3StreamStore, error) {
+func news3StreamStore(bucket string, sseType string) (*s3StreamStore, error) {
 	sess, err := session.NewSessionWithOptions(
 		session.Options{
 			SharedConfigState: session.SharedConfigEnable,
@@ -57,18 +40,10 @@ func news3StreamStore(bucket string, options ...s3Option) (*s3StreamStore, error
 	svc := s3.New(sess)
 
 	ss := &s3StreamStore{
-		sess:   sess,
-		s3:     svc,
-		bucket: bucket,
-	}
-
-	for _, option := range options {
-		switch opt := option.(type) {
-		case serverSideEncryptionOpt:
-			ss.sseType = ServerSideEncryptionType(opt)
-		default:
-			log.Fatalf("unhandled option type %T. This is a bug.", opt)
-		}
+		sess:    sess,
+		s3:      svc,
+		bucket:  bucket,
+		sseType: sseType,
 	}
 
 	return ss, nil
@@ -78,7 +53,7 @@ type s3StreamStore struct {
 	sess    *session.Session
 	s3      *s3.S3
 	bucket  string
-	sseType ServerSideEncryptionType
+	sseType string
 }
 
 func (fs *s3StreamStore) Lstat(name string) (os.FileInfo, error) {
@@ -268,8 +243,8 @@ func (fs *s3StreamStore) Mkdir(name string, mode os.FileMode) error {
 		ContentType: aws.String("application/x-directory"),
 	}
 
-	if fs.sseType != ServerSideEncryptionTypeNone {
-		input.ServerSideEncryption = aws.String(string(fs.sseType))
+	if fs.sseType != "" {
+		input.ServerSideEncryption = aws.String(fs.sseType)
 	}
 
 	_, err := fs.s3.PutObject(input)
@@ -337,8 +312,8 @@ func (fs *s3StreamStore) CreateWriteCloser(name string) (straw.StrawWriter, erro
 		Bucket: aws.String(fs.bucket),
 	}
 
-	if fs.sseType != ServerSideEncryptionTypeNone {
-		input.ServerSideEncryption = aws.String(string(fs.sseType))
+	if fs.sseType != "" {
+		input.ServerSideEncryption = aws.String(fs.sseType)
 	}
 
 	errCh := make(chan error, 1)
