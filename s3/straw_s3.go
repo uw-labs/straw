@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -20,31 +19,15 @@ import (
 	"github.com/uw-labs/straw"
 )
 
-type ServerSideEncryptionType string
-
-const (
-	ServerSideEncryptionTypeNone   ServerSideEncryptionType = ""
-	ServerSideEncryptionTypeAES256 ServerSideEncryptionType = "AES256"
-)
-
-var _ straw.StreamStore = &S3StreamStore{}
+var _ straw.StreamStore = &s3StreamStore{}
 
 func init() {
 	straw.Register("s3", func(u *url.URL) (straw.StreamStore, error) {
-		sse := u.Query().Get("sse")
-		var opts []S3Option
-		switch sse {
-		case "":
-		case "AES256":
-			opts = append(opts, S3ServerSideEncoding(ServerSideEncryptionTypeAES256))
-		default:
-			return nil, fmt.Errorf("unknown server side encryption type '%s'", sse)
-		}
-		return NewS3StreamStore(u.Host, opts...)
+		return news3StreamStore(u.Host, u.Query().Get("sse"))
 	})
 }
 
-func NewS3StreamStore(bucket string, options ...S3Option) (*S3StreamStore, error) {
+func news3StreamStore(bucket string, sseType string) (*s3StreamStore, error) {
 	sess, err := session.NewSessionWithOptions(
 		session.Options{
 			SharedConfigState: session.SharedConfigEnable,
@@ -56,37 +39,29 @@ func NewS3StreamStore(bucket string, options ...S3Option) (*S3StreamStore, error
 
 	svc := s3.New(sess)
 
-	ss := &S3StreamStore{
-		sess:   sess,
-		s3:     svc,
-		bucket: bucket,
-	}
-
-	for _, option := range options {
-		switch opt := option.(type) {
-		case serverSideEncryptionOpt:
-			ss.sseType = ServerSideEncryptionType(opt)
-		default:
-			log.Fatalf("unhandled option type %T. This is a bug.", opt)
-		}
+	ss := &s3StreamStore{
+		sess:    sess,
+		s3:      svc,
+		bucket:  bucket,
+		sseType: sseType,
 	}
 
 	return ss, nil
 }
 
-type S3StreamStore struct {
+type s3StreamStore struct {
 	sess    *session.Session
 	s3      *s3.S3
 	bucket  string
-	sseType ServerSideEncryptionType
+	sseType string
 }
 
-func (fs *S3StreamStore) Lstat(name string) (os.FileInfo, error) {
+func (fs *s3StreamStore) Lstat(name string) (os.FileInfo, error) {
 	// S3 does not support symlinks
 	return fs.Stat(name)
 }
 
-func (fs *S3StreamStore) Stat(name string) (os.FileInfo, error) {
+func (fs *s3StreamStore) Stat(name string) (os.FileInfo, error) {
 	name = fs.noSlashPrefix(name)
 	name = fs.noSlashSuffix(name)
 
@@ -176,7 +151,7 @@ func (sr *s3StatResult) Sys() interface{} {
 	return nil
 }
 
-func (fs *S3StreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
+func (fs *s3StreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
 	fi, err := fs.Stat(name)
 	if err != nil {
 		return nil, err
@@ -199,25 +174,25 @@ func (fs *S3StreamStore) OpenReadCloser(name string) (straw.StrawReader, error) 
 		}
 		return nil, err
 	}
-	return &S3Reader{out.Body, fs.s3, input}, nil
+	return &s3Reader{out.Body, fs.s3, input}, nil
 }
 
-type S3Reader struct {
+type s3Reader struct {
 	rc io.ReadCloser
 
 	s3    *s3.S3
 	input s3.GetObjectInput
 }
 
-func (r *S3Reader) Read(buf []byte) (int, error) {
+func (r *s3Reader) Read(buf []byte) (int, error) {
 	return r.rc.Read(buf)
 }
 
-func (r *S3Reader) Close() error {
+func (r *s3Reader) Close() error {
 	return r.rc.Close()
 }
 
-func (r *S3Reader) ReadAt(buf []byte, start int64) (int, error) {
+func (r *s3Reader) ReadAt(buf []byte, start int64) (int, error) {
 	end := int64(len(buf)) + start - 1
 	r.input.Range = aws.String(fmt.Sprintf("bytes=%d-%d", start, end))
 	out, err := r.s3.GetObject(&r.input)
@@ -249,7 +224,7 @@ func (r *S3Reader) ReadAt(buf []byte, start int64) (int, error) {
 	}
 }
 
-func (fs *S3StreamStore) Mkdir(name string, mode os.FileMode) error {
+func (fs *s3StreamStore) Mkdir(name string, mode os.FileMode) error {
 	if !strings.HasSuffix(name, "/") {
 		name = name + "/"
 	}
@@ -268,15 +243,15 @@ func (fs *S3StreamStore) Mkdir(name string, mode os.FileMode) error {
 		ContentType: aws.String("application/x-directory"),
 	}
 
-	if fs.sseType != ServerSideEncryptionTypeNone {
-		input.ServerSideEncryption = aws.String(string(fs.sseType))
+	if fs.sseType != "" {
+		input.ServerSideEncryption = aws.String(fs.sseType)
 	}
 
 	_, err := fs.s3.PutObject(input)
 	return err
 }
 
-func (fs *S3StreamStore) checkParentDir(child string) error {
+func (fs *s3StreamStore) checkParentDir(child string) error {
 	child = fs.noSlashPrefix(child)
 	child = fs.noSlashSuffix(child)
 
@@ -293,7 +268,7 @@ func (fs *S3StreamStore) checkParentDir(child string) error {
 	return nil
 }
 
-func (fs *S3StreamStore) Remove(name string) error {
+func (fs *s3StreamStore) Remove(name string) error {
 	fi, err := fs.Stat(name)
 	if err != nil {
 		return err
@@ -316,7 +291,7 @@ func (fs *S3StreamStore) Remove(name string) error {
 	return err
 }
 
-func (fs *S3StreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
+func (fs *s3StreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
 	name = fs.noSlashPrefix(name)
 
 	if err := fs.checkParentDir(name); err != nil {
@@ -337,8 +312,8 @@ func (fs *S3StreamStore) CreateWriteCloser(name string) (straw.StrawWriter, erro
 		Bucket: aws.String(fs.bucket),
 	}
 
-	if fs.sseType != ServerSideEncryptionTypeNone {
-		input.ServerSideEncryption = aws.String(string(fs.sseType))
+	if fs.sseType != "" {
+		input.ServerSideEncryption = aws.String(fs.sseType)
 	}
 
 	errCh := make(chan error, 1)
@@ -355,21 +330,21 @@ func (fs *S3StreamStore) CreateWriteCloser(name string) (straw.StrawWriter, erro
 	return ul, nil
 }
 
-func (fs *S3StreamStore) noSlashPrefix(s string) string {
+func (fs *s3StreamStore) noSlashPrefix(s string) string {
 	if strings.HasPrefix(s, "/") {
 		return s[1:]
 	}
 	return s
 }
 
-func (fs *S3StreamStore) noSlashSuffix(s string) string {
+func (fs *s3StreamStore) noSlashSuffix(s string) string {
 	if strings.HasSuffix(s, "/") {
 		return s[:len(s)-1]
 	}
 	return s
 }
 
-func (fs *S3StreamStore) fixTrailingSlash(s string, wantSlash bool) string {
+func (fs *s3StreamStore) fixTrailingSlash(s string, wantSlash bool) string {
 	if wantSlash {
 		if !strings.HasSuffix(s, "/") {
 			return s + "/"
@@ -382,7 +357,7 @@ func (fs *S3StreamStore) fixTrailingSlash(s string, wantSlash bool) string {
 	return s
 }
 
-func (fs *S3StreamStore) lastElem(s string) string {
+func (fs *s3StreamStore) lastElem(s string) string {
 	_, f := filepath.Split(fs.noSlashSuffix(s))
 	return f
 }
@@ -404,7 +379,7 @@ func (wc *s3uploader) Close() error {
 	return <-wc.errCh
 }
 
-func (fs *S3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
+func (fs *s3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	if !strings.HasSuffix(name, "/") {
 		name = name + "/"
 	}

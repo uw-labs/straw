@@ -16,20 +16,20 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var _ straw.StreamStore = &SFTPStreamStore{}
+var _ straw.StreamStore = &sftpStreamStore{}
 
 func init() {
 	straw.Register("sftp", func(u *url.URL) (straw.StreamStore, error) {
-		return NewSFTPStreamStore(u.String())
+		return newSFTPStreamStore(u.String())
 	})
 }
 
-type SFTPStreamStore struct {
+type sftpStreamStore struct {
 	sshClient  *ssh.Client
 	sftpClient *sftp.Client
 }
 
-func NewSFTPStreamStore(urlString string) (*SFTPStreamStore, error) {
+func newSFTPStreamStore(urlString string) (*sftpStreamStore, error) {
 	u, err := url.Parse(urlString)
 	if err != nil {
 		return nil, err
@@ -59,20 +59,20 @@ func NewSFTPStreamStore(urlString string) (*SFTPStreamStore, error) {
 		return nil, err
 	}
 
-	ss := &SFTPStreamStore{client, sclient}
+	ss := &sftpStreamStore{client, sclient}
 
 	return ss, nil
 }
 
-func (s *SFTPStreamStore) Lstat(filename string) (os.FileInfo, error) {
+func (s *sftpStreamStore) Lstat(filename string) (os.FileInfo, error) {
 	return s.sftpClient.Lstat(filename)
 }
 
-func (s *SFTPStreamStore) Stat(filename string) (os.FileInfo, error) {
+func (s *sftpStreamStore) Stat(filename string) (os.FileInfo, error) {
 	return s.sftpClient.Stat(filename)
 }
 
-func (s *SFTPStreamStore) Mkdir(path string, mode os.FileMode) error {
+func (s *sftpStreamStore) Mkdir(path string, mode os.FileMode) error {
 	err := s.sftpClient.Mkdir(path)
 	if err != nil && strings.Contains(err.Error(), ": file exists") {
 		d, _ := filepath.Split(path)
@@ -81,7 +81,7 @@ func (s *SFTPStreamStore) Mkdir(path string, mode os.FileMode) error {
 	return err
 }
 
-func (s *SFTPStreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
+func (s *sftpStreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
 	sr, err := s.sftpClient.Open(name)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (s *SFTPStreamStore) OpenReadCloser(name string) (straw.StrawReader, error)
 	return &sftpReader{f: sr}, nil
 }
 
-func (s *SFTPStreamStore) Remove(name string) error {
+func (s *sftpStreamStore) Remove(name string) error {
 	err := s.sftpClient.Remove(name)
 	if err != nil && strings.Contains(err.Error(), ": directory not empty") {
 		return fmt.Errorf("%s directory not empty", name)
@@ -106,7 +106,7 @@ func (s *SFTPStreamStore) Remove(name string) error {
 	return err
 }
 
-func (s *SFTPStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
+func (s *sftpStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
 	fi, err := s.Stat(name)
 	if err == nil && fi.IsDir() {
 		return nil, fmt.Errorf("%s is a directory", name)
@@ -120,7 +120,7 @@ func (s *SFTPStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, err
 	return sw, nil
 }
 
-func (s *SFTPStreamStore) Readdir(name string) ([]os.FileInfo, error) {
+func (s *sftpStreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	fi, err := s.sftpClient.ReadDir(name)
 	if err != nil {
 		return nil, err
