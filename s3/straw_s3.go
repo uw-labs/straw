@@ -1,10 +1,11 @@
-package straw
+package s3
 
 import (
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/uw-labs/straw"
 )
 
 type ServerSideEncryptionType string
@@ -25,7 +27,22 @@ const (
 	ServerSideEncryptionTypeAES256 ServerSideEncryptionType = "AES256"
 )
 
-var _ StreamStore = &S3StreamStore{}
+var _ straw.StreamStore = &S3StreamStore{}
+
+func init() {
+	straw.Register("s3", func(u *url.URL) (straw.StreamStore, error) {
+		sse := u.Query().Get("sse")
+		var opts []S3Option
+		switch sse {
+		case "":
+		case "AES256":
+			opts = append(opts, S3ServerSideEncoding(ServerSideEncryptionTypeAES256))
+		default:
+			return nil, fmt.Errorf("unknown server side encryption type '%s'", sse)
+		}
+		return NewS3StreamStore(u.Host, opts...)
+	})
+}
 
 func NewS3StreamStore(bucket string, options ...S3Option) (*S3StreamStore, error) {
 	sess, err := session.NewSessionWithOptions(
@@ -159,7 +176,7 @@ func (sr *s3StatResult) Sys() interface{} {
 	return nil
 }
 
-func (fs *S3StreamStore) OpenReadCloser(name string) (StrawReader, error) {
+func (fs *S3StreamStore) OpenReadCloser(name string) (straw.StrawReader, error) {
 	fi, err := fs.Stat(name)
 	if err != nil {
 		return nil, err
@@ -299,7 +316,7 @@ func (fs *S3StreamStore) Remove(name string) error {
 	return err
 }
 
-func (fs *S3StreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
+func (fs *S3StreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
 	name = fs.noSlashPrefix(name)
 
 	if err := fs.checkParentDir(name); err != nil {

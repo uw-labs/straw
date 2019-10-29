@@ -1,4 +1,4 @@
-package straw
+package s3
 
 // S3Option is an option to the s3 backend
 type S3Option interface {
