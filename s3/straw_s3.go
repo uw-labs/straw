@@ -56,6 +56,11 @@ type s3StreamStore struct {
 	sseType string
 }
 
+func (fs *s3StreamStore) Close() error {
+	// nothing to close for s3 it seems
+	return nil
+}
+
 func (fs *s3StreamStore) Lstat(name string) (os.FileInfo, error) {
 	// S3 does not support symlinks
 	return fs.Stat(name)
