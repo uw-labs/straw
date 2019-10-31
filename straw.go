@@ -18,6 +18,7 @@ type StrawWriter interface {
 }
 
 type StreamStore interface {
+	Close() error
 	OpenReadCloser(name string) (StrawReader, error)
 	CreateWriteCloser(name string) (StrawWriter, error)
 	Lstat(path string) (os.FileInfo, error)

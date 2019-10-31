@@ -64,6 +64,15 @@ func newSFTPStreamStore(urlString string) (*sftpStreamStore, error) {
 	return ss, nil
 }
 
+func (s *sftpStreamStore) Close() error {
+	e1 := s.sftpClient.Close()
+	e2 := s.sshClient.Close()
+	if e1 != nil {
+		return e1
+	}
+	return e2
+}
+
 func (s *sftpStreamStore) Lstat(filename string) (os.FileInfo, error) {
 	return s.sftpClient.Lstat(filename)
 }

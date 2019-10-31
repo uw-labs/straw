@@ -49,6 +49,10 @@ type gcsStreamStore struct {
 	bucket string
 }
 
+func (fs *gcsStreamStore) Close() error {
+	return fs.client.Close()
+}
+
 func (fs *gcsStreamStore) Lstat(name string) (os.FileInfo, error) {
 	// GCS does not support symlinks
 	return fs.Stat(name)

@@ -69,6 +69,10 @@ func (mf *memFile) Sys() interface{} {
 	return nil
 }
 
+func (fs *memStreamStore) Close() error {
+	return nil
+}
+
 func (fs *memStreamStore) Lstat(name string) (os.FileInfo, error) {
 	return fs.Stat(name)
 }

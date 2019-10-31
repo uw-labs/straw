@@ -11,6 +11,10 @@ var _ StreamStore = &osStreamStore{}
 type osStreamStore struct {
 }
 
+func (_ *osStreamStore) Close() error {
+	return nil
+}
+
 func (_ *osStreamStore) Lstat(filename string) (os.FileInfo, error) {
 	return os.Lstat(filename)
 }
