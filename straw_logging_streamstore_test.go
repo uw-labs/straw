@@ -58,6 +58,12 @@ func (fs *TestLogStreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	return fs.wrapped.Readdir(name)
 }
 
+func (fs *TestLogStreamStore) Close() error {
+	fs.before("Close")
+	defer fs.after("Close")
+	return fs.wrapped.Close()
+}
+
 func (fs *TestLogStreamStore) before(funcName string, vals ...interface{}) {
 	fs.debug(fmt.Sprintf("before %s : ", funcName), vals)
 }
