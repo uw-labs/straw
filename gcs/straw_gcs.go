@@ -38,6 +38,7 @@ func newGCSStreamStore(credentialsFile string, bucket string) (*gcsStreamStore, 
 	ss := &gcsStreamStore{
 		client: gcsClient,
 		bucket: bucket,
+		ctx:    ctx,
 	}
 
 	return ss, nil
@@ -46,6 +47,7 @@ func newGCSStreamStore(credentialsFile string, bucket string) (*gcsStreamStore, 
 type gcsStreamStore struct {
 	client *storage.Client
 	bucket string
+	ctx    context.Context
 }
 
 func (fs *gcsStreamStore) Close() error {
@@ -73,7 +75,7 @@ func (fs *gcsStreamStore) Stat(name string) (os.FileInfo, error) {
 		Prefix:    name,
 		Delimiter: "/",
 	}
-	iter := fs.client.Bucket(fs.bucket).Objects(context.Background(), &input)
+	iter := fs.client.Bucket(fs.bucket).Objects(fs.ctx, &input)
 
 	var matching []os.FileInfo
 
@@ -122,7 +124,7 @@ func (fs *gcsStreamStore) OpenReadCloser(name string) (straw.StrawReader, error)
 	}
 
 	nameNoSlash := fs.noSlashPrefix(name)
-	r, err := fs.client.Bucket(fs.bucket).Object(nameNoSlash).NewReader(context.Background())
+	r, err := fs.client.Bucket(fs.bucket).Object(nameNoSlash).NewReader(fs.ctx)
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
 			return nil, os.ErrNotExist
@@ -130,17 +132,18 @@ func (fs *gcsStreamStore) OpenReadCloser(name string) (straw.StrawReader, error)
 		return nil, err
 	}
 
-	return &gcsReader{r, fs, nameNoSlash}, nil
+	return &gcsReader{r, fs, nameNoSlash, fs.ctx}, nil
 }
 
 type gcsReader struct {
 	*storage.Reader
 	ss      *gcsStreamStore
 	objName string
+	ctx     context.Context
 }
 
 func (r *gcsReader) ReadAt(buf []byte, start int64) (int, error) {
-	rdr, err := r.ss.client.Bucket(r.ss.bucket).Object(r.objName).NewRangeReader(context.Background(), start, int64(len(buf)))
+	rdr, err := r.ss.client.Bucket(r.ss.bucket).Object(r.objName).NewRangeReader(r.ctx, start, int64(len(buf)))
 	if err != nil {
 		return 0, err
 	}
@@ -168,7 +171,7 @@ func (fs *gcsStreamStore) Mkdir(name string, mode os.FileMode) error {
 	}
 
 	obj := fs.client.Bucket(fs.bucket).Object(name)
-	w := obj.NewWriter(context.Background())
+	w := obj.NewWriter(fs.ctx)
 
 	if _, err := w.Write([]byte{}); err != nil {
 		_ = w.Close()
@@ -212,7 +215,7 @@ func (fs *gcsStreamStore) Remove(name string) error {
 		name = fs.fixTrailingSlash(name, true)
 	}
 
-	return fs.client.Bucket(fs.bucket).Object(name).Delete(context.Background())
+	return fs.client.Bucket(fs.bucket).Object(name).Delete(fs.ctx)
 }
 
 func (fs *gcsStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, error) {
@@ -226,7 +229,7 @@ func (fs *gcsStreamStore) CreateWriteCloser(name string) (straw.StrawWriter, err
 		return nil, fmt.Errorf("%s is a directory", name)
 	}
 
-	return fs.client.Bucket(fs.bucket).Object(name).NewWriter(context.Background()), nil
+	return fs.client.Bucket(fs.bucket).Object(name).NewWriter(fs.ctx), nil
 }
 
 func (fs *gcsStreamStore) noSlashPrefix(s string) string {
@@ -267,7 +270,7 @@ func (fs *gcsStreamStore) Readdir(name string) ([]os.FileInfo, error) {
 		Prefix:    name,
 		Delimiter: "/",
 	}
-	iter := fs.client.Bucket(fs.bucket).Objects(context.Background(), &input)
+	iter := fs.client.Bucket(fs.bucket).Objects(fs.ctx, &input)
 
 attrLoop:
 	for {
