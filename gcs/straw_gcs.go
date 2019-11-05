@@ -144,6 +144,7 @@ func (r *gcsReader) ReadAt(buf []byte, start int64) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer rdr.Close()
 	i, err := io.ReadFull(rdr, buf)
 	if err == io.ErrUnexpectedEOF {
 		// Not unexpected.
