@@ -6,3 +6,6 @@ fi
 
 aws s3 rb --force s3://$S3_TEST_BUCKET/
 aws s3 mb s3://$S3_TEST_BUCKET/
+
+gsutil -m rm -r  gs://mg-test-straw/*
+
