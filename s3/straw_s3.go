@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -179,7 +180,7 @@ func (fs *s3StreamStore) OpenReadCloser(name string) (straw.StrawReader, error) 
 		}
 		return nil, err
 	}
-	return &s3Reader{out.Body, fs.s3, input}, nil
+	return &s3Reader{out.Body, fs.s3, input, -1}, nil
 }
 
 type s3Reader struct {
@@ -187,9 +188,45 @@ type s3Reader struct {
 
 	s3    *s3.S3
 	input s3.GetObjectInput
+
+	// -1 means don't seek
+	seek int64
+}
+
+func (r *s3Reader) SeekStart(start int64) error {
+	if start < 0 {
+		return errors.New("invalid seek position")
+	}
+	r.seek = start
+	return nil
 }
 
 func (r *s3Reader) Read(buf []byte) (int, error) {
+	if r.seek != -1 {
+		// we have a deferred seek to do before we read.
+		err := r.rc.Close()
+		if err != nil {
+			return 0, err
+		}
+		r.rc = eofRdr
+
+		r.input.Range = aws.String(fmt.Sprintf("bytes=%d-", r.seek))
+		out, err := r.s3.GetObject(&r.input)
+		if err != nil {
+			if e, ok := err.(awserr.Error); ok {
+				if e.Code() == s3.ErrCodeNoSuchKey {
+					return 0, os.ErrNotExist
+				}
+				if e.Code() == "InvalidRange" {
+					return 0, io.EOF
+				}
+			}
+			return 0, err
+		}
+		r.rc = out.Body
+		r.seek = -1
+	}
+
 	return r.rc.Read(buf)
 }
 
@@ -385,6 +422,7 @@ func (wc *s3uploader) Close() error {
 }
 
 func (fs *s3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
+
 	if !strings.HasSuffix(name, "/") {
 		name = name + "/"
 	}
@@ -431,4 +469,18 @@ func (fs *s3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 
 		input.ContinuationToken = out.NextContinuationToken
 	}
+}
+
+var (
+	eofRdr = &eofReader{}
+)
+
+type eofReader struct{}
+
+func (r *eofReader) Read(buf []byte) (int, error) {
+	return 0, io.EOF
+}
+
+func (r *eofReader) Close() error {
+	return nil
 }

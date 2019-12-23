@@ -2,6 +2,7 @@ package gcs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/uw-labs/straw"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -132,14 +134,53 @@ func (fs *gcsStreamStore) OpenReadCloser(name string) (straw.StrawReader, error)
 		return nil, err
 	}
 
-	return &gcsReader{r, fs, nameNoSlash, fs.ctx}, nil
+	return &gcsReader{r, fs, nameNoSlash, fs.ctx, -1}, nil
 }
 
 type gcsReader struct {
-	*storage.Reader
+	r       io.ReadCloser
 	ss      *gcsStreamStore
 	objName string
 	ctx     context.Context
+
+	// -1 means don't seek
+	seek int64
+}
+
+func (r *gcsReader) SeekStart(start int64) error {
+	if start < 0 {
+		return errors.New("invalid seek position")
+	}
+	r.seek = start
+	return nil
+}
+
+func (r *gcsReader) Close() error {
+	return r.r.Close()
+}
+
+func (r *gcsReader) Read(buf []byte) (int, error) {
+	if r.seek != -1 {
+		// we have a deferred seek to do before we read.
+		if err := r.Close(); err != nil {
+			return 0, err
+		}
+		r.r = eofRdr
+
+		rdr, err := r.ss.client.Bucket(r.ss.bucket).Object(r.objName).NewRangeReader(r.ctx, r.seek, -1)
+		if err != nil {
+			if e, ok := err.(*googleapi.Error); ok {
+				if e.Code == 416 {
+					return 0, io.EOF
+				}
+			}
+			return 0, err
+		}
+		r.r = rdr
+		r.seek = -1
+	}
+
+	return r.r.Read(buf)
 }
 
 func (r *gcsReader) ReadAt(buf []byte, start int64) (int, error) {
@@ -305,4 +346,18 @@ attrLoop:
 	}
 	sort.Slice(results, func(i, j int) bool { return results[i].Name() < results[j].Name() })
 	return results, nil
+}
+
+var (
+	eofRdr = &eofReader{}
+)
+
+type eofReader struct{}
+
+func (r *eofReader) Read(buf []byte) (int, error) {
+	return 0, io.EOF
+}
+
+func (r *eofReader) Close() error {
+	return nil
 }

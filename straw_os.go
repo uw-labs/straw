@@ -2,6 +2,7 @@ package straw
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sort"
 )
@@ -41,7 +42,16 @@ func (_ *osStreamStore) OpenReadCloser(name string) (StrawReader, error) {
 		f.Close()
 		return nil, fmt.Errorf("%s is a directory", name)
 	}
-	return f, nil
+	return file{f}, nil
+}
+
+type file struct {
+	*os.File
+}
+
+func (f file) SeekStart(offset int64) error {
+	_, err := f.Seek(offset, io.SeekStart)
+	return err
 }
 
 func (_ *osStreamStore) Remove(name string) error {

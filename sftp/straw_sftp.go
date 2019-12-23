@@ -155,6 +155,14 @@ func (r *sftpReader) Read(buf []byte) (int, error) {
 	return r.f.Read(buf)
 }
 
+func (r *sftpReader) SeekStart(offset int64) error {
+	r.lk.Lock()
+	defer r.lk.Unlock()
+
+	_, err := r.f.Seek(offset, io.SeekStart)
+	return err
+}
+
 func (r *sftpReader) ReadAt(buf []byte, offset int64) (int, error) {
 	r.lk.Lock()
 	defer r.lk.Unlock()

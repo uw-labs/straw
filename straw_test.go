@@ -512,6 +512,72 @@ func (fst *fsTester) TestReadAtWithRead(t *testing.T) {
 
 }
 
+func (fst *fsTester) TestSeek(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	dir := filepath.Join(fst.testRoot, "TestSeek")
+	file := filepath.Join(dir, "file")
+
+	data := make([]byte, 64)
+	for i := range data {
+		data[i] = byte(i)
+	}
+
+	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.writeFile(fst.fs, file, data))
+
+	r, err := fst.fs.OpenReadCloser(file)
+	require.NoError(err)
+	assert.NotNil(r)
+
+	buf := make([]byte, 1024)
+
+	// read first 4 bytes
+	i, err := r.ReadAt(buf[0:4], 0)
+	assert.NoError(err)
+	assert.Equal(4, i)
+	assert.Equal(data[0:i], buf[0:i])
+
+	// seek to 48, read 4 bytes
+	err = r.SeekStart(48)
+	assert.NoError(err)
+	i, err = r.Read(buf[0:4])
+	assert.NoError(err)
+	assert.Equal(4, i)
+	assert.Equal(data[48:i+48], buf[0:i])
+
+	// seek to almost end, try to read past end
+	err = r.SeekStart(60)
+	assert.NoError(err)
+	i, err = r.Read(buf[0:8])
+	if err != nil && err != io.EOF {
+		assert.NoError(err)
+	}
+	assert.Equal(4, i)
+	assert.Equal(data[60:i+60], buf[0:i])
+
+	// next read should be EOF
+	i, err = r.Read(buf[0:8])
+	assert.Equal(io.EOF, err)
+	assert.Equal(0, i)
+
+	// read first 4 bytes again, now that we've seen EOF.
+	err = r.SeekStart(0)
+	assert.NoError(err)
+	i, err = r.Read(buf[0:4])
+	assert.NoError(err)
+	assert.Equal(4, i)
+	assert.Equal(data[0:i], buf[0:i])
+
+	// seek past end
+	err = r.SeekStart(128)
+	assert.NoError(err)
+	i, err = r.Read(buf[0:4])
+	assert.Equal(io.EOF, err)
+	assert.Equal(0, i)
+}
+
 func (fst *fsTester) writeFile(fs straw.StreamStore, name string, data []byte) error {
 	w, err := fs.CreateWriteCloser(name)
 	if err != nil {

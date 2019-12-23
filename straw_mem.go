@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"sort"
@@ -98,6 +99,11 @@ func newMemFileReader(mf *memFile) (*memFileReader, error) {
 
 type memFileReader struct {
 	*bytes.Reader
+}
+
+func (mfr *memFileReader) SeekStart(offset int64) error {
+	_, err := mfr.Seek(offset, io.SeekStart)
+	return err
 }
 
 func (mfr *memFileReader) Close() error {
