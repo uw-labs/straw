@@ -10,7 +10,7 @@ type StrawReader interface {
 	io.Reader
 	io.Closer
 	io.ReaderAt
-	SeekStart(offset int64) error
+	io.Seeker
 }
 
 type StrawWriter interface {

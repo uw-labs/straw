@@ -540,16 +540,18 @@ func (fst *fsTester) TestSeek(t *testing.T) {
 	assert.Equal(data[0:i], buf[0:i])
 
 	// seek to 48, read 4 bytes
-	err = r.SeekStart(48)
+	pos, err := r.Seek(48, io.SeekStart)
 	assert.NoError(err)
+	assert.Equal(int64(48), pos)
 	i, err = r.Read(buf[0:4])
 	assert.NoError(err)
 	assert.Equal(4, i)
 	assert.Equal(data[48:i+48], buf[0:i])
 
 	// seek to almost end, try to read past end
-	err = r.SeekStart(60)
+	pos, err = r.Seek(60, io.SeekStart)
 	assert.NoError(err)
+	assert.Equal(int64(60), pos)
 	i, err = r.Read(buf[0:8])
 	if err != nil && err != io.EOF {
 		assert.NoError(err)
@@ -563,16 +565,18 @@ func (fst *fsTester) TestSeek(t *testing.T) {
 	assert.Equal(0, i)
 
 	// read first 4 bytes again, now that we've seen EOF.
-	err = r.SeekStart(0)
+	pos, err = r.Seek(0, io.SeekStart)
 	assert.NoError(err)
+	assert.Equal(int64(0), pos)
 	i, err = r.Read(buf[0:4])
 	assert.NoError(err)
 	assert.Equal(4, i)
 	assert.Equal(data[0:i], buf[0:i])
 
 	// seek past end
-	err = r.SeekStart(128)
+	pos, err = r.Seek(128, io.SeekStart)
 	assert.NoError(err)
+	assert.Equal(int64(128), pos)
 	i, err = r.Read(buf[0:4])
 	assert.Equal(io.EOF, err)
 	assert.Equal(0, i)

@@ -193,12 +193,17 @@ type s3Reader struct {
 	seek int64
 }
 
-func (r *s3Reader) SeekStart(start int64) error {
-	if start < 0 {
-		return errors.New("invalid seek position")
+func (r *s3Reader) Seek(start int64, whence int) (int64, error) {
+	switch whence {
+	case io.SeekStart:
+		if start < 0 {
+			return 0, errors.New("invalid seek position")
+		}
+		r.seek = start
+		return start, nil
+	default:
+		return 0, fmt.Errorf("seek %d not currently supported in s3 backend", whence)
 	}
-	r.seek = start
-	return nil
 }
 
 func (r *s3Reader) Read(buf []byte) (int, error) {
