@@ -1,11 +1,17 @@
 #!/bin/bash
-if [ "$S3_TEST_BUCKET" == "" ] ; then 
-	echo "S3_TEST_BUCKET" not set
-	exit -1
+if [ "$S3_TEST_BUCKET" != "" ] ; then 
+	echo "clearing s3 bucket"
+	aws s3 rb --force s3://$S3_TEST_BUCKET/
+	aws s3 mb s3://$S3_TEST_BUCKET/
+else
+	echo "S3_TEST_BUCKET" not set, skipping.
 fi
 
-aws s3 rb --force s3://$S3_TEST_BUCKET/
-aws s3 mb s3://$S3_TEST_BUCKET/
+if [ "$GCS_TEST_BUCKET" != "" ] ; then 
+	echo "clearing gcs bucket"
+	gsutil -m rm -r gs://$GCS_TEST_BUCKET/*
+else
+	echo "GCS_TEST_BUCKET" not set, skipping.
+fi
 
-gsutil -m rm -r  gs://mg-test-straw/*
 
