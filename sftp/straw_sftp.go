@@ -1,6 +1,7 @@
 package sftp
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +18,9 @@ import (
 )
 
 var _ straw.StreamStore = &sftpStreamStore{}
+
+// host_key is a base64 encoded public key (e.g. ssh-rsa blah...)
+const hostKeyQueryParam = "host_key"
 
 func init() {
 	straw.Register("sftp", func(u *url.URL) (straw.StreamStore, error) {
@@ -40,12 +44,28 @@ func newSFTPStreamStore(urlString string) (*sftpStreamStore, error) {
 		return nil, errors.New("username and password are required in the url")
 	}
 
+	hkCallback := ssh.InsecureIgnoreHostKey()
+
+	// Check for HostKey and use if found
+	hostKeyEncodedString := u.Query().Get(hostKeyQueryParam)
+	if len(hostKeyEncodedString) > 0 {
+		decoded, err := base64.URLEncoding.DecodeString(hostKeyEncodedString)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode %q query parameter: %w ", hostKeyQueryParam, err)
+		}
+		hostKey, err := ssh.ParsePublicKey(decoded)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing key, err: %v", err)
+		}
+		hkCallback = ssh.FixedHostKey(hostKey)
+	}
+
 	config := &ssh.ClientConfig{
 		User: u.User.Username(),
 		Auth: []ssh.AuthMethod{
 			ssh.Password(pass),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO: allow passing host key as url param. ssh.FixedHostKey(hostKey),
+		HostKeyCallback: hkCallback,
 	}
 
 	client, err := ssh.Dial("tcp", u.Host, config)
