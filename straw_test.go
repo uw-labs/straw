@@ -3,6 +3,7 @@ package straw_test
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -718,9 +719,21 @@ func TestGCSFS(t *testing.T) {
 }
 
 func TestSFTPFS(t *testing.T) {
-	go startSFTPServer()
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	sftpfs, err := straw.Open("sftp://test:tiger@localhost:9922/")
+	go startSFTPServer(priv)
+
+	sshKey, err := ssh.NewPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encodedKey := base64.URLEncoding.EncodeToString(sshKey.Marshal())
+
+	sftpfs, err := straw.Open("sftp://test:tiger@localhost:9922/?host_key="+encodedKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -731,7 +744,7 @@ func TestSFTPFS(t *testing.T) {
 	testFS(t, "sftpfs", func() straw.StreamStore { return &TestLogStreamStore{t, sftpfs} }, dir)
 }
 
-func startSFTPServer() {
+func startSFTPServer(priv ed25519.PrivateKey) {
 	config := &ssh.ServerConfig{
 		PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
 			log.Printf("Login: %s\n", c.User())
@@ -740,11 +753,6 @@ func startSFTPServer() {
 			}
 			return nil, fmt.Errorf("password rejected for %q", c.User())
 		},
-	}
-
-	_, priv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	private, err := ssh.NewSignerFromKey(priv)
