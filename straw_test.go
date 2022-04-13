@@ -99,7 +99,6 @@ func (fst *fsTester) TestCreateWriteOnlyOnExistingDir(t *testing.T) {
 
 	fi, err := fst.fs.Stat(name)
 	require.NoError(err)
-	assert.Equal(fi.Size(), int64(4096))
 	assert.Equal(fi.IsDir(), true)
 }
 
@@ -132,7 +131,6 @@ func (fst *fsTester) TestMkdirAtRoot(t *testing.T) {
 
 	fi, err := fst.fs.Stat(name)
 	require.NoError(err)
-	assert.Equal(fi.Size(), int64(4096))
 	assert.Equal(fi.IsDir(), true)
 }
 
@@ -148,7 +146,6 @@ func (fst *fsTester) TestMkdirTrailingSlash(t *testing.T) {
 
 	fi, err := fst.fs.Stat(name)
 	require.NoError(err)
-	assert.Equal(fi.Size(), int64(4096))
 	assert.Equal(fi.IsDir(), true)
 }
 
@@ -384,7 +381,6 @@ func (fst *fsTester) TestStat(t *testing.T) {
 	assert.Equal(true, fi.IsDir())
 	assert.Equal("dir", fi.Name())
 	assert.Equal(os.FileMode(0755)|os.ModeDir, fi.Mode())
-	assert.Equal(int64(4096), fi.Size())
 
 	fi, err = fst.fs.Stat(file)
 	assert.NoError(err)
@@ -733,7 +729,7 @@ func TestSFTPFS(t *testing.T) {
 
 	encodedKey := base64.URLEncoding.EncodeToString(sshKey.Marshal())
 
-	sftpfs, err := straw.Open("sftp://test:tiger@localhost:9922/?host_key="+encodedKey)
+	sftpfs, err := straw.Open("sftp://test:tiger@localhost:9922/?host_key=" + encodedKey)
 	if err != nil {
 		t.Fatal(err)
 	}
