@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -15,15 +14,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/anicoll/straw"
 	"github.com/pkg/sftp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uw-labs/straw"
 	"golang.org/x/crypto/ssh"
 
-	_ "github.com/uw-labs/straw/gcs"
-	_ "github.com/uw-labs/straw/s3"
-	_ "github.com/uw-labs/straw/sftp"
+	_ "github.com/anicoll/straw/gcs"
+	_ "github.com/anicoll/straw/s3"
+	_ "github.com/anicoll/straw/sftp"
 )
 
 type fsTester struct {
@@ -47,7 +46,7 @@ func (fst *fsTester) TestOpenReadCloserOnDirectory(t *testing.T) {
 
 	name := filepath.Join(fst.testRoot, "TestOpenReadCloserOnDirectory")
 
-	err := fst.fs.Mkdir(name, 0755)
+	err := fst.fs.Mkdir(name, 0o755)
 	require.NoError(err)
 
 	f, err := fst.fs.OpenReadCloser(name)
@@ -80,7 +79,7 @@ func (fst *fsTester) TestCreateNewWriteOnly(t *testing.T) {
 	assert.False(files[0].IsDir())
 	assert.Equal("TestCreateNewWriteOnly", files[0].Name())
 	assert.Equal(int64(5), files[0].Size())
-	assert.Equal(os.FileMode(0644), files[0].Mode())
+	assert.Equal(os.FileMode(0o644), files[0].Mode())
 }
 
 func (fst *fsTester) TestCreateWriteOnlyOnExistingDir(t *testing.T) {
@@ -89,7 +88,7 @@ func (fst *fsTester) TestCreateWriteOnlyOnExistingDir(t *testing.T) {
 
 	name := filepath.Join(fst.testRoot, "TestCreateWriteOnlyOnExistingDir")
 
-	err := fst.fs.Mkdir(name, 0755)
+	err := fst.fs.Mkdir(name, 0o755)
 	require.NoError(err)
 
 	f, err := fst.fs.CreateWriteCloser(name)
@@ -126,7 +125,7 @@ func (fst *fsTester) TestMkdirAtRoot(t *testing.T) {
 
 	name := filepath.Join(fst.testRoot, "TestMkdirAtRoot")
 
-	err := fst.fs.Mkdir(name, 0755)
+	err := fst.fs.Mkdir(name, 0o755)
 	require.NoError(err)
 
 	fi, err := fst.fs.Stat(name)
@@ -141,7 +140,7 @@ func (fst *fsTester) TestMkdirTrailingSlash(t *testing.T) {
 	name := filepath.Join(fst.testRoot, "TestMkdirTrailingSlash")
 	name = name + "/"
 
-	err := fst.fs.Mkdir(name, 0755)
+	err := fst.fs.Mkdir(name, 0o755)
 	require.NoError(err)
 
 	fi, err := fst.fs.Stat(name)
@@ -155,9 +154,9 @@ func (fst *fsTester) TestMkdirOnExistingDir(t *testing.T) {
 
 	name := filepath.Join(fst.testRoot, "TestMkdirOnExistingDir")
 
-	require.NoError(fst.fs.Mkdir(name, 0755))
+	require.NoError(fst.fs.Mkdir(name, 0o755))
 
-	err := fst.fs.Mkdir(name, 0755)
+	err := fst.fs.Mkdir(name, 0o755)
 	require.NotNil(err)
 	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "file exists") }, "error does not match: %s", err.Error())
 }
@@ -167,7 +166,7 @@ func (fst *fsTester) TestMkdirOnExistingFile(t *testing.T) {
 	require := require.New(t)
 
 	name := filepath.Join(fst.testRoot, "TestMkdirOnExistingFile")
-	require.NoError(fst.fs.Mkdir(name, 0755))
+	require.NoError(fst.fs.Mkdir(name, 0o755))
 
 	filename := filepath.Join(name, "testfile")
 	f, err := fst.fs.CreateWriteCloser(filename)
@@ -175,7 +174,7 @@ func (fst *fsTester) TestMkdirOnExistingFile(t *testing.T) {
 	require.NoError(writeAll(f, []byte{0, 1, 2, 3, 4}))
 	require.NoError(f.Close())
 
-	err = fst.fs.Mkdir(filename, 0755)
+	err = fst.fs.Mkdir(filename, 0o755)
 	assert.Condition(func() bool { return strings.HasSuffix(err.Error(), "file exists") })
 }
 
@@ -184,7 +183,7 @@ func (fst *fsTester) TestMkdirInNonExistingDir(t *testing.T) {
 
 	name := filepath.Join(fst.testRoot, "TestMkdirInNonExistingDir")
 	name = filepath.Join(name, "innerdir")
-	err := fst.fs.Mkdir(name, 0755)
+	err := fst.fs.Mkdir(name, 0o755)
 
 	assert.True(os.IsNotExist(err))
 }
@@ -201,7 +200,7 @@ func (fst *fsTester) TestRemoveNonExistingInSubdir(t *testing.T) {
 	require := require.New(t)
 
 	top := filepath.Join(fst.testRoot, "TestRemoveNonExistingInSubdir")
-	require.NoError(fst.fs.Mkdir(top, 0755))
+	require.NoError(fst.fs.Mkdir(top, 0o755))
 
 	err := fst.fs.Remove(filepath.Join(top, "not_existing_file"))
 	assert.True(os.IsNotExist(err))
@@ -223,7 +222,7 @@ func (fst *fsTester) TestRemoveEmptyDir(t *testing.T) {
 
 	name := filepath.Join(fst.testRoot, "TestRemoveEmptyDir")
 
-	err := fst.fs.Mkdir(name, 0755)
+	err := fst.fs.Mkdir(name, 0o755)
 	require.NoError(err)
 
 	fi, err := fst.fs.Stat(name)
@@ -244,7 +243,7 @@ func (fst *fsTester) TestRemoveNonEmptyDir(t *testing.T) {
 
 	name := filepath.Join(fst.testRoot, "TestRemoveNonEmptyDir")
 
-	err := fst.fs.Mkdir(name, 0755)
+	err := fst.fs.Mkdir(name, 0o755)
 	require.NoError(err)
 
 	w1, err := fst.fs.CreateWriteCloser(filepath.Join(name, "a_file"))
@@ -268,7 +267,7 @@ func (fst *fsTester) TestRemoveFileInDir(t *testing.T) {
 	dirname := filepath.Join(fst.testRoot, "TestRemoveFileInDir")
 	filename := filepath.Join(dirname, "a_file")
 
-	require.NoError(fst.fs.Mkdir(dirname, 0755))
+	require.NoError(fst.fs.Mkdir(dirname, 0o755))
 	require.NoError(fst.writeFile(fst.fs, filename, []byte{1}))
 
 	fi, err := fst.fs.Stat(filename)
@@ -299,7 +298,7 @@ func (fst *fsTester) TestOverwrite(t *testing.T) {
 	r1, err := fst.fs.OpenReadCloser(name)
 	require.NoError(err)
 	assert.NotNil(r1)
-	all, err := ioutil.ReadAll(r1)
+	all, err := io.ReadAll(r1)
 	assert.NoError(err)
 	assert.Equal([]byte{0, 1, 2, 3, 4}, all)
 
@@ -312,7 +311,7 @@ func (fst *fsTester) TestOverwrite(t *testing.T) {
 	r2, err := fst.fs.OpenReadCloser(name)
 	assert.NoError(err)
 	assert.NotNil(r2)
-	all, err = ioutil.ReadAll(r2)
+	all, err = io.ReadAll(r2)
 	assert.NoError(err)
 	assert.Equal([]byte{5, 6, 7}, all)
 }
@@ -326,8 +325,8 @@ func (fst *fsTester) TestReaddir(t *testing.T) {
 	file1 := filepath.Join(dir, "file1")
 	file2 := filepath.Join(dir1, "file2")
 
-	require.NoError(fst.fs.Mkdir(dir, 0755))
-	require.NoError(fst.fs.Mkdir(dir1, 0755))
+	require.NoError(fst.fs.Mkdir(dir, 0o755))
+	require.NoError(fst.fs.Mkdir(dir1, 0o755))
 	require.NoError(fst.writeFile(fst.fs, file1, []byte{1}))
 	require.NoError(fst.writeFile(fst.fs, file2, []byte{2}))
 
@@ -351,7 +350,7 @@ func (fst *fsTester) TestReaddirMoreThanMaxKeysFiles(t *testing.T) {
 	require := require.New(t)
 
 	dir := filepath.Join(fst.testRoot, "TestReaddirManyFiles")
-	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.fs.Mkdir(dir, 0o755))
 	for i := 0; i < 1010; i++ {
 		if i%100 == 0 {
 			log.Printf("created %d files", i)
@@ -372,21 +371,21 @@ func (fst *fsTester) TestStat(t *testing.T) {
 	dir1 := filepath.Join(dir, "dir")
 	file := filepath.Join(dir1, "file")
 
-	require.NoError(fst.fs.Mkdir(dir, 0755))
-	require.NoError(fst.fs.Mkdir(dir1, 0755))
+	require.NoError(fst.fs.Mkdir(dir, 0o755))
+	require.NoError(fst.fs.Mkdir(dir1, 0o755))
 	require.NoError(fst.writeFile(fst.fs, file, []byte{2}))
 
 	fi, err := fst.fs.Stat(dir1)
 	assert.NoError(err)
 	assert.Equal(true, fi.IsDir())
 	assert.Equal("dir", fi.Name())
-	assert.Equal(os.FileMode(0755)|os.ModeDir, fi.Mode())
+	assert.Equal(os.FileMode(0o755)|os.ModeDir, fi.Mode())
 
 	fi, err = fst.fs.Stat(file)
 	assert.NoError(err)
 	assert.Equal(false, fi.IsDir())
 	assert.Equal("file", fi.Name())
-	assert.Equal(os.FileMode(0644), fi.Mode())
+	assert.Equal(os.FileMode(0o644), fi.Mode())
 	assert.Equal(int64(1), fi.Size())
 
 	root := "/"
@@ -407,7 +406,7 @@ func (fst *fsTester) TestReadAtBasic(t *testing.T) {
 		data[i] = byte(i)
 	}
 
-	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.fs.Mkdir(dir, 0o755))
 	require.NoError(fst.writeFile(fst.fs, file, data))
 
 	r, err := fst.fs.OpenReadCloser(file)
@@ -461,7 +460,7 @@ func (fst *fsTester) TestReadAtWithRead(t *testing.T) {
 		data[i] = byte(i)
 	}
 
-	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.fs.Mkdir(dir, 0o755))
 	require.NoError(fst.writeFile(fst.fs, file, data))
 
 	r, err := fst.fs.OpenReadCloser(file)
@@ -506,7 +505,6 @@ func (fst *fsTester) TestReadAtWithRead(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal(4, i)
 	assert.Equal(data[20:i+20], buf[0:i])
-
 }
 
 func (fst *fsTester) TestSeek(t *testing.T) {
@@ -521,7 +519,7 @@ func (fst *fsTester) TestSeek(t *testing.T) {
 		data[i] = byte(i)
 	}
 
-	require.NoError(fst.fs.Mkdir(dir, 0755))
+	require.NoError(fst.fs.Mkdir(dir, 0o755))
 	require.NoError(fst.writeFile(fst.fs, file, data))
 
 	r, err := fst.fs.OpenReadCloser(file)
@@ -607,7 +605,7 @@ func (fst *fsTester) TestAppend(t *testing.T) {
 	f, err = fst.fs.OpenFile(name, os.O_RDONLY, 0)
 	assert.NoError(err)
 	assert.NotNil(f)
-	all, err := ioutil.ReadAll(f)
+	all, err := io.ReadAll(f)
 	assert.NoError(err)
 	assert.Equal([]byte{0, 1, 2, 3, 4}, all)
 
@@ -620,7 +618,7 @@ func (fst *fsTester) TestAppend(t *testing.T) {
 	f, err = fst.fs.OpenFile(name, os.O_RDONLY, 0)
 	assert.NoError(err)
 	assert.NotNil(f)
-	all, err = ioutil.ReadAll(f)
+	all, err = io.ReadAll(f)
 	assert.NoError(err)
 	assert.Equal([]byte{0, 1, 2, 3, 4, 5, 6, 7}, all)
 
@@ -646,7 +644,7 @@ func (fst *fsTester) TestWriteAtCreate(t *testing.T) {
 	f, err = fst.fs.OpenFile(name, os.O_RDONLY, 0)
 	assert.NoError(err)
 	assert.NotNil(f)
-	all, err := ioutil.ReadAll(f)
+	all, err := io.ReadAll(f)
 	assert.NoError(err)
 	assert.Equal([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2}, all)
 }
@@ -664,7 +662,7 @@ func writeAll(w io.Writer, data []byte) error {
 }
 
 func tempDir() string {
-	tempdir, err := ioutil.TempDir("", "straw_test_")
+	tempdir, err := os.MkdirTemp("", "straw_test_")
 	if err != nil {
 		panic(err)
 	}
@@ -733,7 +731,7 @@ func TestSFTPFS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir, err := ioutil.TempDir("", "straw_sftp_test")
+	dir, err := os.MkdirTemp("", "straw_sftp_test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -846,7 +844,7 @@ func TestMkdirAll(t *testing.T) {
 
 	ss, _ := straw.Open("mem://")
 
-	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
+	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0o644))
 
 	fis, err := ss.Readdir("/foo/bar/baz/qux/")
 	assert.NoError(err)
@@ -860,6 +858,6 @@ func TestMkdirAllExistingNoError(t *testing.T) {
 
 	ss, _ := straw.Open("mem://")
 
-	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
-	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0644))
+	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0o644))
+	assert.NoError(straw.MkdirAll(ss, "/foo/bar/baz/qux/quux/", 0o644))
 }

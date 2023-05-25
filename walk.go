@@ -29,7 +29,6 @@ var SkipDir = errors.New("skip this directory")
 type WalkFunc = func(string, os.FileInfo, error) error
 
 func walk(store StreamStore, path string, info os.FileInfo, walkFn WalkFunc) error {
-
 	if !info.IsDir() {
 		return walkFn(path, info, nil)
 	}

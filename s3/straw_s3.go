@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anicoll/straw"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/uw-labs/straw"
 )
 
 var _ straw.StreamStore = &s3StreamStore{}
@@ -148,9 +148,9 @@ func (sr *s3StatResult) ModTime() time.Time {
 
 func (sr *s3StatResult) Mode() os.FileMode {
 	if sr.IsDir() {
-		return os.ModeDir | 0755
+		return os.ModeDir | 0o755
 	}
-	return 0644
+	return 0o644
 }
 
 func (sr *s3StatResult) Sys() interface{} {
@@ -427,7 +427,6 @@ func (wc *s3uploader) Close() error {
 }
 
 func (fs *s3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
-
 	if !strings.HasSuffix(name, "/") {
 		name = name + "/"
 	}
@@ -476,9 +475,7 @@ func (fs *s3StreamStore) Readdir(name string) ([]os.FileInfo, error) {
 	}
 }
 
-var (
-	eofRdr = &eofReader{}
-)
+var eofRdr = &eofReader{}
 
 type eofReader struct{}
 

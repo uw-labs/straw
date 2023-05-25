@@ -1,6 +1,6 @@
-module github.com/uw-labs/straw
+module github.com/anicoll/straw
 
-go 1.18
+go 1.20
 
 require (
 	cloud.google.com/go/storage v1.22.0

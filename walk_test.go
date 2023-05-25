@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/anicoll/straw"
 	"github.com/stretchr/testify/assert"
-	"github.com/uw-labs/straw"
 )
 
 func TestWalk(t *testing.T) {
@@ -14,10 +14,10 @@ func TestWalk(t *testing.T) {
 
 	ss, _ := straw.Open("mem://")
 
-	ss.Mkdir("a", 0755)
+	ss.Mkdir("a", 0o755)
 	writeFile(ss, "a/1")
 	writeFile(ss, "b")
-	ss.Mkdir("c", 0755)
+	ss.Mkdir("c", 0o755)
 
 	var found []string
 	var fiNames []string
@@ -43,10 +43,10 @@ func TestWalkSkipDir(t *testing.T) {
 
 	ss, _ := straw.Open("mem://")
 
-	ss.Mkdir("a", 0755)
+	ss.Mkdir("a", 0o755)
 	writeFile(ss, "a/1")
 	writeFile(ss, "b")
-	ss.Mkdir("c", 0755)
+	ss.Mkdir("c", 0o755)
 
 	var found []string
 	var fiNames []string
@@ -75,10 +75,10 @@ func TestWalkExitOnErr(t *testing.T) {
 
 	ss, _ := straw.Open("mem://")
 
-	ss.Mkdir("a", 0755)
+	ss.Mkdir("a", 0o755)
 	writeFile(ss, "a/1")
 	writeFile(ss, "b")
-	ss.Mkdir("c", 0755)
+	ss.Mkdir("c", 0o755)
 
 	var found []string
 	var fiNames []string
@@ -103,6 +103,7 @@ func TestWalkExitOnErr(t *testing.T) {
 	assert.Equal([]string{"", "a", "1"}, fiNames)
 	assert.Equal([]bool{true, true, false}, fiIsDirs)
 }
+
 func TestWalkRootNotExist(t *testing.T) {
 	assert := assert.New(t)
 

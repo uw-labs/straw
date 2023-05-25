@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/anicoll/straw"
 	"github.com/pkg/sftp"
-	"github.com/uw-labs/straw"
 	"golang.org/x/crypto/ssh"
 )
 

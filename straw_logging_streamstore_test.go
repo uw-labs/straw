@@ -1,12 +1,11 @@
 package straw_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/uw-labs/straw"
+	"github.com/anicoll/straw"
 )
 
 var _ straw.StreamStore = &TestLogStreamStore{}
@@ -73,13 +72,5 @@ func (fs *TestLogStreamStore) after(funcName string, vals ...interface{}) {
 }
 
 func (fs *TestLogStreamStore) debug(s string, i interface{}) {
-	//fs.t.Logf("\n\n%s\n%s\n%s\n", s, fs.j(i), fs.j(fs.wrapped))
-}
-
-func (fs *TestLogStreamStore) j(i interface{}) string {
-	j, err := json.MarshalIndent(i, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	return string(j)
+	// fs.t.Logf("\n\n%s\n%s\n%s\n", s, fs.j(i), fs.j(fs.wrapped))
 }

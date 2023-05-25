@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/uw-labs/straw"
+	"github.com/anicoll/straw"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -353,9 +353,7 @@ attrLoop:
 	return results, nil
 }
 
-var (
-	eofRdr = &eofReader{}
-)
+var eofRdr = &eofReader{}
 
 type eofReader struct{}
 

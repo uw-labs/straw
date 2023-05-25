@@ -9,8 +9,7 @@ import (
 
 var _ StreamStore = &osStreamStore{}
 
-type osStreamStore struct {
-}
+type osStreamStore struct{}
 
 func (_ *osStreamStore) Close() error {
 	return nil
@@ -59,7 +58,7 @@ func (_ *osStreamStore) Remove(name string) error {
 }
 
 func (_ *osStreamStore) CreateWriteCloser(name string) (StrawWriter, error) {
-	return os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	return os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
 }
 
 func (_ *osStreamStore) Readdir(name string) ([]os.FileInfo, error) {
